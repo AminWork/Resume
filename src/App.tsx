@@ -26,6 +26,7 @@ function App() {
   const [isTyping, setIsTyping] = useState(false);
   const [chatButtonPulse, setChatButtonPulse] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [openProject, setOpenProject] = useState<string | null>(null);
   
   const heroRef = useRef<HTMLDivElement>(null);
   const terminalInputRef = useRef<HTMLInputElement>(null);
@@ -100,17 +101,20 @@ function App() {
       {
         name: "Intelligent Quality Control System",
         description: "Developed an intelligent QC system with Python, Django, React, and TensorFlow for automating inspection processes in manufacturing environments.",
-        technologies: ["Python", "Django", "React", "TensorFlow"]
+        technologies: ["Python", "Django", "React", "TensorFlow"],
+        features: ["Automated visual inspection", "Real-time defect detection", "Integration with manufacturing lines", "Customizable reporting dashboard"]
       },
       {
         name: "Supermarket Automation System",
         description: "Designed computer vision-based automation using OpenCV and TensorFlow for inventory management and real-time analysis.",
-        technologies: ["OpenCV", "TensorFlow", "Python", "Computer Vision"]
+        technologies: ["OpenCV", "TensorFlow", "Python", "Computer Vision"],
+        features: ["Automated inventory tracking", "Real-time shelf analysis", "Computer vision for product recognition", "Sales analytics dashboard"]
       },
       {
         name: "AI-Based Fire Detection Application",
         description: "Created a fire detection app with Django and React, utilizing TensorFlow for AI-based detection in critical environments.",
-        technologies: ["Django", "React", "TensorFlow", "AI Detection"]
+        technologies: ["Django", "React", "TensorFlow", "AI Detection"],
+        features: ["AI-powered fire detection", "Real-time alerts", "Integration with safety systems", "Mobile/web dashboard"]
       }
     ]
   };
@@ -443,7 +447,7 @@ ADDITIONAL INFORMATION:
             'X-Title': 'Amin Najafgholizadeh Portfolio'
           },
           body: JSON.stringify({
-            model: 'anthropic/claude-3.5-sonnet',
+            model: 'meta-llama/llama-4-maverick:free',
             messages: [
               {
                 role: 'system',
@@ -1311,25 +1315,23 @@ ADDITIONAL INFORMATION:
           </h2>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <ProjectCard
-              title="Intelligent Quality Control System"
-              description="Developed an intelligent QC system with Python, Django, React, and TensorFlow for automating inspection processes in manufacturing environments."
-              technologies={["Python", "Django", "React", "TensorFlow"]}
-              delay={0}
-            />
-            <ProjectCard
-              title="Supermarket Automation System"
-              description="Designed computer vision-based automation using OpenCV and TensorFlow for inventory management and real-time analysis."
-              technologies={["OpenCV", "TensorFlow", "Python", "Computer Vision"]}
-              delay={200}
-            />
-            <ProjectCard
-              title="AI-Based Fire Detection Application"
-              description="Created a fire detection app with Django and React, utilizing TensorFlow for AI-based detection in critical environments."
-              technologies={["Django", "React", "TensorFlow", "AI Detection"]}
-              delay={400}
-            />
+            {knowledgeBase.projects.map((project, idx) => (
+              <div key={project.name} onClick={() => setOpenProject(project.name)} className="cursor-pointer">
+                <ProjectCard
+                  title={project.name}
+                  description={project.description}
+                  technologies={project.technologies}
+                  delay={idx * 200}
+                />
+              </div>
+            ))}
           </div>
+          {openProject && (
+            <ProjectDetailModal
+              project={knowledgeBase.projects.find(p => p.name === openProject)}
+              onClose={() => setOpenProject(null)}
+            />
+          )}
         </div>
       </section>
 
@@ -1580,6 +1582,32 @@ function ContactCard({ icon, title, value, href, delay }: ContactCardProps) {
         <p className="text-gray-400 text-sm group-hover:text-gray-300 transition-colors duration-300">{value}</p>
       </div>
     </a>
+  );
+}
+
+function ProjectDetailModal({ project, onClose }: { project: any, onClose: () => void }) {
+  if (!project) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+      <div className="project-detail-page max-w-2xl w-full p-8 rounded-2xl shadow-2xl relative animate-fade-in">
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-pink-400 transition-colors text-2xl"><X size={28} /></button>
+        <div className="project-hero p-6 rounded-xl mb-6">
+          <h2 className="text-3xl font-bold mb-2 text-pink-400">{project.name}</h2>
+          <p className="text-gray-300 mb-4">{project.description}</p>
+          <div className="flex flex-wrap gap-2 mb-4">
+            {project.technologies.map((tech: string, i: number) => (
+              <span key={i} className="tech-item px-3 py-1 text-pink-400 text-xs rounded-full border border-pink-500/30">{tech}</span>
+            ))}
+          </div>
+        </div>
+        <div className="space-y-4">
+          <h3 className="text-xl font-semibold text-white mb-2">Key Features</h3>
+          <ul className="list-disc list-inside text-gray-300 space-y-2">
+            {project.features?.map((f: string, i: number) => <li key={i} className="feature-item px-2 py-1 rounded">{f}</li>)}
+          </ul>
+        </div>
+      </div>
+    </div>
   );
 }
 
