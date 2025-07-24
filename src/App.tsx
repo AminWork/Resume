@@ -403,7 +403,7 @@ ADDITIONAL INFORMATION:
 - Passionate about contributing to ecological research through advanced software and data science solutions
 `;
 
-  // OpenRouter API configuration
+  // OpenRouter API configuration (these are some free keys. You are welcome to use them)
   const apiKeys = [
     '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',
     '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',
@@ -447,7 +447,7 @@ ADDITIONAL INFORMATION:
             'X-Title': 'Amin Najafgholizadeh Portfolio'
           },
           body: JSON.stringify({
-            model: 'meta-llama/llama-4-maverick:free',
+            model: 'moonshotai/kimi-k2:free',
             messages: [
               {
                 role: 'system',
