@@ -403,18 +403,9 @@ ADDITIONAL INFORMATION:
 - Passionate about contributing to ecological research through advanced software and data science solutions
 `;
 
-  // OpenRouter API configuration (these are some free keys. You are welcome to use them)
+
   const apiKeys = [
-    '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',
-    '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',
-    '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',
-    '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',
-    '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',
-    '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',
-    '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',
-    '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',
-    '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',
-    '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'
+
   ];
 
   // Track current API key index and failed keys
@@ -422,6 +413,11 @@ ADDITIONAL INFORMATION:
   const [failedKeys, setFailedKeys] = useState<Set<number>>(new Set());
 
   const callOpenRouterAPI = async (message: string): Promise<string> => {
+    // Check if we have valid API keys
+    if (apiKeys.length === 0 || apiKeys[0] === 'YOUR_OPENROUTER_API_KEY_1') {
+      throw new Error('Please add your OpenRouter API keys to the code. Get them from https://openrouter.ai/keys');
+    }
+
     // Find next available API key
     let keyIndex = currentKeyIndex;
     let attempts = 0;
@@ -438,30 +434,39 @@ ADDITIONAL INFORMATION:
       const apiKey = apiKeys[keyIndex];
       
       try {
-        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-          method: 'POST',
+        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
           headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
-            'HTTP-Referer': window.location.origin,
-            'X-Title': 'Amin Najafgholizadeh Portfolio'
+            "Authorization": `Bearer ${apiKey}`,
+            "HTTP-Referer": window.location.origin, // Site URL for rankings
+            "X-Title": "Amin Najafgholizadeh Portfolio", // Site title for rankings
+            "Content-Type": "application/json"
           },
           body: JSON.stringify({
-            model: 'moonshotai/kimi-k2:free',
-            messages: [
+            "model": "qwen/qwen3-235b-a22b-07-25:free",
+            "messages": [
               {
-                role: 'system',
-                content: `You are a professional assistant representing Amin Najafgholizadeh. Answer questions about him based on this CV information: ${cvSummary}. Be conversational, helpful, and accurate. Keep responses concise but informative.`
+                "role": "system",
+                "content": `You are a professional assistant representing Amin Najafgholizadeh. Answer questions about him based on this CV information: ${cvSummary}. Be conversational, helpful, and accurate. Keep responses concise but informative.`
               },
               {
-                role: 'user',
-                content: message
+                "role": "user",
+                "content": message
               }
             ],
-            max_tokens: 500,
-            temperature: 0.7
+            "max_tokens": 500,
+            "temperature": 0.7
           })
         });
+
+        if (response.status === 401) {
+          // Authentication failed - mark this key as failed and try next
+          console.log(`API key ${keyIndex + 1} failed with 401 Unauthorized. Trying next key...`);
+          setFailedKeys(prev => new Set([...prev, keyIndex]));
+          keyIndex = (keyIndex + 1) % apiKeys.length;
+          attempts++;
+          continue;
+        }
 
         if (response.status === 402) {
           // Payment required - mark this key as failed and try next
@@ -473,7 +478,9 @@ ADDITIONAL INFORMATION:
         }
 
         if (!response.ok) {
-          throw new Error(`API request failed: ${response.status}`);
+          const errorData = await response.text();
+          console.error(`API Error (${response.status}):`, errorData);
+          throw new Error(`API request failed: ${response.status} - ${errorData}`);
         }
 
         const data = await response.json();
@@ -486,8 +493,8 @@ ADDITIONAL INFORMATION:
       } catch (error) {
         console.error(`Error with API key ${keyIndex + 1}:`, error);
         
-        // If it's a 402 error, mark key as failed
-        if (error instanceof Error && error.message.includes('402')) {
+        // If it's a 401 or 402 error, mark key as failed
+        if (error instanceof Error && (error.message.includes('401') || error.message.includes('402'))) {
           setFailedKeys(prev => new Set([...prev, keyIndex]));
         }
         
@@ -497,7 +504,7 @@ ADDITIONAL INFORMATION:
     }
 
     // All keys failed
-    throw new Error('All API keys have been exhausted or failed. Please check your OpenRouter account.');
+    throw new Error('All API keys have been exhausted or failed. Please check your OpenRouter API keys at https://openrouter.ai/keys');
   };
 
   // Reset failed keys periodically (every hour) in case credits are refilled
@@ -1039,15 +1046,15 @@ ADDITIONAL INFORMATION:
       )}
 
       {/* Hero Section */}
-      <section id="hero" ref={heroRef} className="min-h-screen flex items-center justify-center relative overflow-hidden">
+      <section id="hero" ref={heroRef} className="min-h-screen flex items-center justify-center relative overflow-hidden px-4">
         <div className="absolute inset-0">
           <div className="hero-gradient"></div>
           <div className="geometric-shapes"></div>
         </div>
         
-        <div className="relative z-10 text-center max-w-5xl mx-auto px-4">
+        <div className="relative z-10 text-center max-w-5xl mx-auto">
           <div className={`transition-all duration-1000 ${isLoaded ? 'animate-fade-in-up' : 'opacity-0 translate-y-10'}`}>
-            <h1 className="hero-title text-6xl md:text-8xl font-bold mb-6">
+            <h1 className="hero-title text-4xl sm:text-6xl md:text-8xl font-bold mb-6">
               <span className="inline-block animate-text-shimmer bg-gradient-to-r from-blue-400 via-purple-400 to-teal-400 bg-clip-text text-transparent bg-300% animate-gradient">
                 Amin Najafgholizadeh
               </span>
@@ -1055,13 +1062,13 @@ ADDITIONAL INFORMATION:
           </div>
           
           <div className={`transition-all duration-1000 delay-300 ${isLoaded ? 'animate-fade-in-up' : 'opacity-0 translate-y-10'}`}>
-            <h2 className="text-2xl md:text-4xl text-gray-300 mb-8 font-light">
+            <h2 className="text-lg sm:text-2xl md:text-4xl text-gray-300 mb-8 font-light">
               <span className="typing-animation">Senior Machine Learning Engineer & Full Stack Developer</span>
             </h2>
           </div>
           
           <div className={`transition-all duration-1000 delay-500 ${isLoaded ? 'animate-fade-in-up' : 'opacity-0 translate-y-10'}`}>
-            <p className="text-xl text-gray-400 mb-12 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-base sm:text-xl text-gray-400 mb-12 max-w-3xl mx-auto leading-relaxed">
               Building the future with AI and cutting-edge technology. 4+ years of experience in machine learning, 
               full-stack development, and data science.
             </p>
@@ -1070,7 +1077,7 @@ ADDITIONAL INFORMATION:
           <div className={`flex flex-col sm:flex-row gap-6 justify-center transition-all duration-1000 delay-700 ${isLoaded ? 'animate-fade-in-up' : 'opacity-0 translate-y-10'}`}>
             <button
               onClick={() => scrollToSection('contact')}
-              className="cta-button group bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-4 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/25"
+              className="cta-button group bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/25"
             >
               <span className="flex items-center justify-center space-x-2">
                 <Mail className="transition-transform duration-300 group-hover:rotate-12" size={20} />
@@ -1079,7 +1086,7 @@ ADDITIONAL INFORMATION:
             </button>
             <button
               onClick={() => scrollToSection('experience')}
-              className="cta-button-outline group border-2 border-blue-600 text-blue-400 hover:bg-blue-600 hover:text-white px-8 py-4 rounded-xl font-semibold transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/25"
+              className="cta-button-outline group border-2 border-blue-600 text-blue-400 hover:bg-blue-600 hover:text-white px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-semibold transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/25"
             >
               <span className="flex items-center justify-center space-x-2">
                 <Zap className="transition-transform duration-300 group-hover:scale-110" size={20} />
@@ -1099,7 +1106,7 @@ ADDITIONAL INFORMATION:
       {/* About Section */}
       <section id="about" className="py-20 bg-gray-800/50 backdrop-blur-sm relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="section-title text-5xl font-bold text-center mb-16">
+          <h2 className="section-title text-4xl sm:text-5xl font-bold text-center mb-16">
             <span className="bg-gradient-to-r from-blue-400 to-teal-400 bg-clip-text text-transparent">
               About Me
             </span>
@@ -1107,20 +1114,20 @@ ADDITIONAL INFORMATION:
           
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div className="space-y-6">
-              <h3 className="text-3xl font-semibold mb-6 text-white animate-slide-in-left">
+              <h3 className="text-2xl sm:text-3xl font-semibold mb-6 text-white animate-slide-in-left">
                 Professional Summary
               </h3>
-              <p className="text-gray-300 leading-relaxed mb-6 animate-fade-in text-lg">
+              <p className="text-gray-300 leading-relaxed mb-6 animate-fade-in text-base sm:text-lg">
                 Machine Learning Software Engineer and Full Stack Developer with over 4 years of experience in building 
                 scalable ML models, web applications, and data processing pipelines. Proficient in deep learning, 
                 image processing, and SQL databases.
               </p>
-              <p className="text-gray-300 leading-relaxed mb-8 animate-fade-in text-lg">
+              <p className="text-gray-300 leading-relaxed mb-8 animate-fade-in text-base sm:text-lg">
                 Experienced in Python, TensorFlow, PyTorch, Django, and React. Passionate about interdisciplinary 
                 collaboration in ecological research and data science.
               </p>
               
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="stat-card text-center p-6 bg-gradient-to-br from-blue-600/20 to-purple-600/20 rounded-xl backdrop-blur-sm border border-blue-500/20 hover:border-blue-400/40 transition-all duration-300 hover:scale-105">
                   <div className="text-4xl font-bold text-blue-400 mb-2 counter" data-target="4">4+</div>
                   <div className="text-sm text-gray-400">Years Experience</div>
@@ -1161,75 +1168,28 @@ ADDITIONAL INFORMATION:
       {/* Experience Section */}
       <section id="experience" className="py-20 relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="section-title text-5xl font-bold text-center mb-16">
+          <h2 className="section-title text-4xl sm:text-5xl font-bold text-center mb-16">
             <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
               Professional Experience
             </span>
           </h2>
           
           <div className="relative">
-            <div className="timeline-line absolute left-4 md:left-1/2 transform md:-translate-x-1/2 h-full w-1 bg-gradient-to-b from-blue-500 via-purple-500 to-teal-500 rounded-full"></div>
+            <div className="hidden md:block timeline-line absolute left-1/2 transform -translate-x-1/2 h-full w-1 bg-gradient-to-b from-blue-500 via-purple-500 to-teal-500 rounded-full"></div>
             
             <div className="space-y-16">
-              <ExperienceItem
-                title="Senior Machine Learning Engineer"
-                company="Arian Saeed Industrial Group"
-                location="Tehran, Iran"
-                period="May 2024 – Present"
-                description={[
-                  "Lead the development and deployment of advanced ML solutions across business domains.",
-                  "Collaborate with cross-functional teams to optimize performance with state-of-the-art ML algorithms.",
-                  "Mentor junior engineers on best practices for production-grade ML models and scalable architectures.",
-                  "Design and implement end-to-end ML pipelines for real-time data processing and inference."
-                ]}
-                isLeft={false}
-                delay={0}
-              />
-              
-              <ExperienceItem
-                title="Full Stack Software Engineer"
-                company="Arad"
-                location="Tehran, Iran"
-                period="Jan 2023 – May 2024"
-                description={[
-                  "Developed and deployed scalable ML algorithms using Python, Django, and React frameworks.",
-                  "Led development teams in successfully launching multiple web applications with 99.9% uptime.",
-                  "Built and maintained responsive web interfaces ensuring seamless user experience across devices.",
-                  "Implemented CI/CD pipelines and automated testing frameworks to improve deployment efficiency."
-                ]}
-                isLeft={true}
-                delay={200}
-              />
-              
-              <ExperienceItem
-                title="Data Scientist"
-                company="Motometrix Inc"
-                location="Boston, MA, USA"
-                period="Jul 2022 – Jan 2023"
-                description={[
-                  "Designed and implemented deep learning models for commodity detection and product differentiation.",
-                  "Developed advanced Bayesian statistical methods to distinguish visually similar items with 95% accuracy.",
-                  "Built real-time dashboards and monitoring systems to evaluate model performance and data quality.",
-                  "Collaborated with product teams to integrate ML solutions into existing business workflows."
-                ]}
-                isLeft={false}
-                delay={400}
-              />
-              
-              <ExperienceItem
-                title="Machine Learning Engineer"
-                company="Part AI Research Center"
-                location="Tehran, Iran"
-                period="Jun 2021 – Jul 2022"
-                description={[
-                  "Developed dynamic pricing models for train tickets using advanced machine learning algorithms.",
-                  "Implemented robust data streaming and processing pipelines with Apache Kafka and PySpark.",
-                  "Deployed scalable AI services using Docker containers and Kubernetes orchestration.",
-                  "Optimized model performance resulting in 30% improvement in prediction accuracy."
-                ]}
-                isLeft={true}
-                delay={600}
-              />
+              {knowledgeBase.experience.map((item, index) => (
+                <ExperienceItem
+                  key={index}
+                  title={item.title}
+                  company={item.company}
+                  location={item.location}
+                  period={item.period}
+                  description={item.description.split('. ')}
+                  isLeft={index % 2 !== 0}
+                  delay={index * 200}
+                />
+              ))}
             </div>
           </div>
         </div>
@@ -1238,27 +1198,23 @@ ADDITIONAL INFORMATION:
       {/* Education Section */}
       <section id="education" className="py-20 bg-gray-800/50 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="section-title text-5xl font-bold text-center mb-16">
+          <h2 className="section-title text-4xl sm:text-5xl font-bold text-center mb-16">
             <span className="bg-gradient-to-r from-teal-400 to-blue-400 bg-clip-text text-transparent">
               Education
             </span>
           </h2>
           
           <div className="grid md:grid-cols-2 gap-8">
-            <EducationCard
-              degree="MBA in Technology"
-              school="Allameh Tabataba'i University"
-              location="Tehran, Iran"
-              period="2023 – 2025 (Expected)"
-              delay={0}
-            />
-            <EducationCard
-              degree="Bachelor's in Electrical and Electronics Engineering"
-              school="Amirkabir University of Technology - Tehran Polytechnic"
-              location="Tehran, Iran"
-              period="2018 – 2022"
-              delay={200}
-            />
+            {knowledgeBase.education.map((item, index) => (
+              <EducationCard
+                key={index}
+                degree={item.degree}
+                school={item.school}
+                location={item.location}
+                period={item.period}
+                delay={index * 200}
+              />
+            ))}
           </div>
         </div>
       </section>
@@ -1266,38 +1222,38 @@ ADDITIONAL INFORMATION:
       {/* Skills Section */}
       <section id="skills" className="py-20 relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="section-title text-5xl font-bold text-center mb-16">
+          <h2 className="section-title text-4xl sm:text-5xl font-bold text-center mb-16">
             <span className="bg-gradient-to-r from-green-400 to-blue-400 bg-clip-text text-transparent">
               Technical Skills
             </span>
           </h2>
           
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
             <SkillCategory
               icon={<Code className="text-blue-400" size={32} />}
               title="Programming Languages"
-              skills={["Python", "Java", "C++", "JavaScript", "Solidity", "Django"]}
+              skills={knowledgeBase.skills.programming}
               color="blue"
               delay={0}
             />
             <SkillCategory
               icon={<Brain className="text-purple-400" size={32} />}
               title="Machine Learning"
-              skills={["TensorFlow", "PyTorch", "Keras", "Scikit-learn", "GANs"]}
+              skills={knowledgeBase.skills.ml}
               color="purple"
               delay={200}
             />
             <SkillCategory
               icon={<Database className="text-green-400" size={32} />}
               title="Data & Big Data"
-              skills={["SQL", "NoSQL", "Hadoop", "Spark", "Kafka"]}
+              skills={knowledgeBase.skills.data}
               color="green"
               delay={400}
             />
             <SkillCategory
               icon={<Cloud className="text-orange-400" size={32} />}
               title="Cloud & DevOps"
-              skills={["AWS", "GCP", "Docker", "Git", "Agile"]}
+              skills={knowledgeBase.skills.cloud}
               color="orange"
               delay={600}
             />
@@ -1308,7 +1264,7 @@ ADDITIONAL INFORMATION:
       {/* Projects Section */}
       <section id="projects" className="py-20 bg-gray-800/50 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="section-title text-5xl font-bold text-center mb-16">
+          <h2 className="section-title text-4xl sm:text-5xl font-bold text-center mb-16">
             <span className="bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">
               Featured Projects
             </span>
@@ -1338,19 +1294,19 @@ ADDITIONAL INFORMATION:
       {/* Contact Section */}
       <section id="contact" className="py-20 relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="section-title text-5xl font-bold text-center mb-16">
+          <h2 className="section-title text-4xl sm:text-5xl font-bold text-center mb-16">
             <span className="bg-gradient-to-r from-blue-400 to-teal-400 bg-clip-text text-transparent">
               Get In Touch
             </span>
           </h2>
           
           <div className="text-center mb-12">
-            <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto animate-fade-in">
+            <p className="text-lg sm:text-xl text-gray-300 mb-8 max-w-2xl mx-auto animate-fade-in">
               I'm always open to discussing new opportunities, innovative projects, or just connecting with fellow tech enthusiasts.
             </p>
           </div>
           
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
             <ContactCard
               icon={<Mail className="text-blue-400" size={28} />}
               title="Email"
@@ -1425,12 +1381,12 @@ interface ExperienceItemProps {
 
 function ExperienceItem({ title, company, location, period, description, isLeft, delay }: ExperienceItemProps) {
   return (
-    <div className={`experience-item relative flex items-center ${isLeft ? 'md:flex-row-reverse' : ''}`} style={{ animationDelay: `${delay}ms` }}>
+    <div className={`experience-item relative flex md:items-center ${isLeft ? 'md:flex-row-reverse' : 'md:flex-row'}`} style={{ animationDelay: `${delay}ms` }}>
       <div className="timeline-dot absolute left-4 md:left-1/2 transform md:-translate-x-1/2 w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full border-4 border-gray-900 shadow-lg shadow-blue-500/50"></div>
-      <div className={`ml-16 md:ml-0 md:w-1/2 ${isLeft ? 'md:pr-16' : 'md:pl-16'}`}>
-        <div className="experience-card bg-gradient-to-br from-gray-800/80 to-gray-700/80 backdrop-blur-sm p-8 rounded-2xl border border-gray-600/30 hover:border-blue-400/40 transition-all duration-500 hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/20">
-          <h3 className="text-2xl font-bold text-white mb-3 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">{title}</h3>
-          <p className="text-blue-400 font-semibold mb-2 text-lg">{company}</p>
+      <div className={`ml-16 md:ml-0 md:w-1/2 ${isLeft ? 'md:pr-8 lg:pr-16' : 'md:pl-8 lg:pl-16'}`}>
+        <div className="experience-card bg-gradient-to-br from-gray-800/80 to-gray-700/80 backdrop-blur-sm p-6 sm:p-8 rounded-2xl border border-gray-600/30 hover:border-blue-400/40 transition-all duration-500 hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/20">
+          <h3 className="text-xl sm:text-2xl font-bold text-white mb-3 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">{title}</h3>
+          <p className="text-blue-400 font-semibold mb-2 text-base sm:text-lg">{company}</p>
           <p className="text-gray-400 text-sm mb-2 flex items-center">
             <MapPin size={14} className="mr-1" />
             {location}
@@ -1588,23 +1544,30 @@ function ContactCard({ icon, title, value, href, delay }: ContactCardProps) {
 function ProjectDetailModal({ project, onClose }: { project: any, onClose: () => void }) {
   if (!project) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-      <div className="project-detail-page max-w-2xl w-full p-8 rounded-2xl shadow-2xl relative animate-fade-in">
-        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-pink-400 transition-colors text-2xl"><X size={28} /></button>
-        <div className="project-hero p-6 rounded-xl mb-6">
-          <h2 className="text-3xl font-bold mb-2 text-pink-400">{project.name}</h2>
-          <p className="text-gray-300 mb-4">{project.description}</p>
-          <div className="flex flex-wrap gap-2 mb-4">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+      <div className="project-detail-page max-w-4xl w-full bg-gray-900 rounded-2xl shadow-2xl relative animate-fade-in overflow-hidden border border-pink-500/20">
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-pink-400 transition-colors text-2xl z-10"><X size={28} /></button>
+        <div className="max-h-[90vh] overflow-y-auto p-6 sm:p-8">
+          <div className="project-hero p-6 rounded-xl mb-6 text-center">
+            <h2 className="text-3xl sm:text-4xl font-bold mb-2 text-pink-400">{project.name}</h2>
+          </div>
+          <p className="text-gray-300 mb-6 text-center sm:text-lg">{project.description}</p>
+          <div className="flex flex-wrap gap-2 justify-center mb-8">
             {project.technologies.map((tech: string, i: number) => (
               <span key={i} className="tech-item px-3 py-1 text-pink-400 text-xs rounded-full border border-pink-500/30">{tech}</span>
             ))}
           </div>
-        </div>
-        <div className="space-y-4">
-          <h3 className="text-xl font-semibold text-white mb-2">Key Features</h3>
-          <ul className="list-disc list-inside text-gray-300 space-y-2">
-            {project.features?.map((f: string, i: number) => <li key={i} className="feature-item px-2 py-1 rounded">{f}</li>)}
-          </ul>
+          <div className="space-y-6">
+            <h3 className="text-2xl font-semibold text-white mb-4 text-center">Key Features</h3>
+            <ul className="grid sm:grid-cols-2 gap-4 text-gray-300">
+              {project.features?.map((f: string, i: number) => 
+                <li key={i} className="feature-item flex items-start space-x-3 p-3 rounded-lg">
+                  <Star size={16} className="text-pink-400 mt-1 flex-shrink-0" />
+                  <span>{f}</span>
+                </li>
+              )}
+            </ul>
+          </div>
         </div>
       </div>
     </div>

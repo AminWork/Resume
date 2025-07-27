@@ -579,25 +579,65 @@ section {
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .hero-title {
-    font-size: 3rem;
+    font-size: 2.5rem;
   }
   
   .section-title {
-    font-size: 2.5rem;
+    font-size: 2rem;
+  }
+  
+  .timeline-line {
+    left: 1.125rem;
+  }
+
+  .experience-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .experience-item .md\\:w-1\\/2 {
+    width: 100%;
+    padding-left: 3rem;
+    padding-right: 0;
   }
   
   .geometric-shapes::before,
   .geometric-shapes::after {
-    width: 200px;
-    height: 200px;
+    width: 150px;
+    height: 150px;
   }
 
   .carousel-container {
-    height: 250px;
+    height: 200px;
   }
 
   .metric-card {
-    padding: 1rem;
+    padding: 0.75rem;
+  }
+
+  .chatbot-container {
+    left: 1rem;
+    right: 1rem;
+    bottom: 1rem;
+    width: auto;
+  }
+
+  .terminal-container {
+    inset: 1rem;
+  }
+}
+
+@media (max-width: 640px) {
+  h1 { font-size: 2.25rem; }
+  h2 { font-size: 1.75rem; }
+  h3 { font-size: 1.25rem; }
+
+  .cta-button, .cta-button-outline {
+    width: 100%;
+  }
+
+  .contact-card {
+    padding: 1.5rem;
   }
 }
 
