@@ -1,5 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronDown, Mail, Phone, Globe, Linkedin, MapPin, Calendar, Code, Database, Cloud, Brain, Award, ExternalLink, Menu, X, Star, Zap, Rocket, Target, Terminal, Minimize2, Maximize2, RotateCcw, MessageCircle, Send, Bot, User } from 'lucide-react';
+import { ChevronDown, Mail, Phone, Globe, Linkedin, MapPin, Calendar, Code, Database, Cloud, Brain, Award, ExternalLink, Menu, X, Star, Zap, Rocket, Target, Terminal, Minimize2, Maximize2, RotateCcw, MessageCircle, Send, Bot, User, Clock, ChevronRight } from 'lucide-react';
+import ForceGraph3D from '3d-force-graph';
+import * as THREE from 'three';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Navigation, Pagination, EffectFade, Mousewheel } from 'swiper/modules';
+import 'swiper/css';
+import 'swiper/css/navigation';
+import 'swiper/css/pagination';
+import 'swiper/css/effect-fade';
+
+// Register GSAP plugin
+gsap.registerPlugin(ScrollTrigger);
 
 function App() {
   const [activeSection, setActiveSection] = useState('hero');
@@ -29,6 +42,12 @@ function App() {
   const [openProject, setOpenProject] = useState<string | null>(null);
   
   const heroRef = useRef<HTMLDivElement>(null);
+  const forceGraphRef = useRef<HTMLDivElement>(null);
+  const parallaxRef = useRef<HTMLDivElement>(null);
+  const learningParallaxRef = useRef<HTMLDivElement>(null);
+  const masteryParallaxRef = useRef<HTMLDivElement>(null);
+  const creationParallaxRef = useRef<HTMLDivElement>(null);
+  const collaborationParallaxRef = useRef<HTMLDivElement>(null);
   const terminalInputRef = useRef<HTMLInputElement>(null);
   const terminalContentRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<HTMLInputElement>(null);
@@ -315,7 +334,97 @@ function App() {
       window.removeEventListener('keydown', handleKeyDown);
       clearTimeout(pulseTimer);
     };
-  }, [terminalOpen]);
+  }, []);
+
+  useEffect(() => {
+    if (!forceGraphRef.current) return;
+
+    const deg2rad = (deg: number) => deg * Math.PI / 180;
+    
+    const N = 100;
+    const nodes = [...Array(N).keys()].map(i => ({
+      id: i,
+      val: (Math.random() * 1.5) + 1
+    }));
+
+    const generateLinks = (nodes: any[]) => {
+      let links: any[] = [];
+      nodes.forEach(node => {
+        let numNodeLinks = Math.round(Math.random() * (0.75 + Math.random())) + 1;
+        for(let i = 0; i < numNodeLinks; i++) {
+          links.push({
+            source: node.id,
+            target: Math.round(Math.random() * (node.id > 0 ? node.id - 1 : node.id))
+          });
+        }
+      });
+      return links;
+    };
+    
+    const links = generateLinks(nodes);
+    const gData = { nodes, links };
+    const distance = 1500;
+
+    const Graph = new ForceGraph3D(forceGraphRef.current)
+      .enableNodeDrag(false)
+      .enableNavigationControls(false)
+      .enablePointerInteraction(false)
+      .showNavInfo(false)
+      .cameraPosition({ z: distance })
+      .nodeRelSize(4)
+      .nodeOpacity(1)
+      .linkWidth(5)
+      .linkDirectionalParticles(5)
+      .linkDirectionalParticleWidth(5)
+      .width(window.innerWidth)
+      .height(window.innerHeight)
+      .backgroundColor('rgba(0,0,17,0)')
+      .graphData(gData);
+
+    try {
+      const bloomPass = new (THREE as any).UnrealBloomPass();
+      bloomPass.strength = 3;
+      bloomPass.radius = 1;
+      bloomPass.threshold = 0.5;
+      if (Graph.postProcessingComposer) {
+        Graph.postProcessingComposer().addPass(bloomPass);
+      }
+    } catch (error) {
+      console.log('Bloom effect not available, continuing without it');
+    }
+
+    let currentAngle = 0;
+    const rotationInterval = setInterval(() => {
+      Graph.cameraPosition({
+        x: distance * Math.sin(deg2rad(currentAngle)),
+        z: distance * Math.cos(deg2rad(currentAngle))
+      });
+      currentAngle += 0.5;
+    }, 10);
+
+    const handleGraphResize = () => {
+      Graph.width(window.innerWidth).height(window.innerHeight).refresh();
+    };
+    window.addEventListener('resize', handleGraphResize);
+
+    const handleGraphClick = (event: MouseEvent) => {
+      event.preventDefault();
+      const newLinks = generateLinks(nodes);
+      const newGData = { nodes, links: newLinks };
+      Graph.graphData(newGData);
+    };
+    forceGraphRef.current.addEventListener('click', handleGraphClick);
+    forceGraphRef.current.addEventListener('touchstart', handleGraphClick);
+
+    return () => {
+      clearInterval(rotationInterval);
+      window.removeEventListener('resize', handleGraphResize);
+      if (forceGraphRef.current) {
+        forceGraphRef.current.removeEventListener('click', handleGraphClick);
+        forceGraphRef.current.removeEventListener('touchstart', handleGraphClick);
+      }
+    };
+  }, [isLoaded]);
 
   useEffect(() => {
     if (terminalOpen && !terminalMinimized && terminalInputRef.current) {
@@ -328,6 +437,88 @@ function App() {
       chatInputRef.current.focus();
     }
   }, [chatbotOpen, chatbotMinimized]);
+
+  // GSAP Parallax animation setup for all sections
+  useEffect(() => {
+    if (!isLoaded) return;
+
+    const parallaxSections = [
+      { ref: parallaxRef, prefix: 'innovation' },
+      { ref: learningParallaxRef, prefix: 'learning' },
+      { ref: masteryParallaxRef, prefix: 'mastery' },
+      { ref: creationParallaxRef, prefix: 'creation' },
+      { ref: collaborationParallaxRef, prefix: 'collaboration' }
+    ];
+
+    const contexts: gsap.Context[] = [];
+
+    parallaxSections.forEach(({ ref, prefix }) => {
+      if (!ref.current) return;
+
+      const ctx = gsap.context(() => {
+        // Create parallax timeline with ScrollTrigger
+        const tl = gsap.timeline({
+          scrollTrigger: {
+            trigger: ref.current,
+            start: 'top bottom',
+            end: 'bottom top',
+            scrub: 1,
+            onUpdate: (self) => {
+              // Add dynamic effects based on scroll progress
+              const progress = self.progress;
+              gsap.set(`.${prefix}-data-stream, .data-stream`, { opacity: 0.3 + progress * 0.7 });
+            }
+          }
+        });
+
+        // Parallax layers with different speeds (use both prefixed and generic classes)
+        tl.fromTo(`.${prefix}-parallax-bg, .parallax-bg`, { y: 0 }, { y: -200 }, 0)
+          .fromTo(`.${prefix}-parallax-circuit1, .parallax-circuit1`, { y: 50 }, { y: -300 }, 0)
+          .fromTo(`.${prefix}-parallax-circuit2, .parallax-circuit2`, { y: -100 }, { y: -400 }, 0)
+          .fromTo(`.${prefix}-parallax-data-flow, .parallax-data-flow`, { y: -50 }, { y: -500 }, 0)
+          .fromTo(`.${prefix}-parallax-nodes, .parallax-nodes`, { y: 0 }, { y: -150 }, 0)
+          .fromTo(`.${prefix}-parallax-code, .parallax-code`, { y: 30 }, { y: -250 }, 0);
+      }, ref);
+
+      contexts.push(ctx);
+    });
+
+    // Global floating animations for all parallax elements
+    const globalCtx = gsap.context(() => {
+      gsap.to('.floating-hex', {
+        y: -20,
+        rotation: 180,
+        duration: 4,
+        ease: 'power2.inOut',
+        stagger: 0.2,
+        repeat: -1,
+        yoyo: true
+      });
+
+      gsap.to('.floating-binary', {
+        x: 10,
+        opacity: 0.8,
+        duration: 3,
+        ease: 'sine.inOut',
+        stagger: 0.1,
+        repeat: -1,
+        yoyo: true
+      });
+
+      gsap.to('.data-stream', {
+        strokeDashoffset: -100,
+        duration: 2,
+        ease: 'none',
+        repeat: -1
+      });
+    });
+
+    contexts.push(globalCtx);
+
+    return () => {
+      contexts.forEach(ctx => ctx.revert()); // Cleanup all contexts
+    };
+  }, [isLoaded]);
 
   useEffect(() => {
     if (terminalContentRef.current) {
@@ -730,7 +921,549 @@ ADDITIONAL INFORMATION:
 
   return (
     <div className="bg-gray-900 text-white min-h-screen overflow-x-hidden">
-      {/* Animated Background */}
+      
+      {/* Enhanced Glitch Effect Styles */}
+      <style>{`
+        .glitch-intense {
+          position: relative;
+          display: inline-block;
+          font-weight: 900;
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+          animation: glitch-skew 2s infinite linear alternate-reverse;
+        }
+        
+        .glitch-intense::before,
+        .glitch-intense::after {
+          content: attr(data-text);
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+        }
+        
+        .glitch-intense::before {
+          animation: glitch-anim-1 3s infinite linear alternate-reverse;
+          color: #ff0018;
+          z-index: -1;
+        }
+        
+        .glitch-intense::after {
+          animation: glitch-anim-2 2s infinite linear alternate-reverse;
+          color: #00fff9;
+          z-index: -2;
+        }
+        
+        @keyframes glitch-anim-1 {
+          0% {
+            clip-path: polygon(0 2%, 100% 2%, 100% 5%, 0 5%);
+            transform: translate(-2px, 2px);
+          }
+          2% {
+            clip-path: polygon(0 78%, 100% 78%, 100% 100%, 0 100%);
+            transform: translate(-1px, -1px);
+          }
+          4% {
+            clip-path: polygon(0 78%, 100% 78%, 100% 100%, 0 100%);
+            transform: translate(2px, 1px);
+          }
+          6% {
+            clip-path: polygon(0 78%, 100% 78%, 100% 100%, 0 100%);
+            transform: translate(-1px, 2px);
+          }
+          8% {
+            clip-path: polygon(0 54%, 100% 54%, 100% 44%, 0 44%);
+            transform: translate(1px, -1px);
+          }
+          10% {
+            clip-path: polygon(0 54%, 100% 54%, 100% 44%, 0 44%);
+            transform: translate(-2px, 1px);
+          }
+          12% {
+            clip-path: polygon(0 30%, 100% 30%, 100% 25%, 0 25%);
+            transform: translate(2px, -2px);
+          }
+          14% {
+            clip-path: polygon(0 30%, 100% 30%, 100% 25%, 0 25%);
+            transform: translate(-1px, 1px);
+          }
+          16% {
+            clip-path: polygon(0 68%, 100% 68%, 100% 70%, 0 70%);
+            transform: translate(1px, 2px);
+          }
+          18% {
+            clip-path: polygon(0 68%, 100% 68%, 100% 70%, 0 70%);
+            transform: translate(-2px, -1px);
+          }
+          20% {
+            clip-path: polygon(0 91%, 100% 91%, 100% 95%, 0 95%);
+            transform: translate(2px, 1px);
+          }
+          22% {
+            clip-path: polygon(0 91%, 100% 91%, 100% 95%, 0 95%);
+            transform: translate(-1px, -2px);
+          }
+          24% {
+            clip-path: polygon(0 15%, 100% 15%, 100% 20%, 0 20%);
+            transform: translate(1px, 1px);
+          }
+          26% {
+            clip-path: polygon(0 15%, 100% 15%, 100% 20%, 0 20%);
+            transform: translate(-2px, 2px);
+          }
+          28% {
+            clip-path: polygon(0 40%, 100% 40%, 100% 39%, 0 39%);
+            transform: translate(2px, -1px);
+          }
+          30% {
+            clip-path: polygon(0 40%, 100% 40%, 100% 39%, 0 39%);
+            transform: translate(-1px, 1px);
+          }
+          32% {
+            clip-path: polygon(0 76%, 100% 76%, 100% 77%, 0 77%);
+            transform: translate(1px, -2px);
+          }
+          34% {
+            clip-path: polygon(0 76%, 100% 76%, 100% 77%, 0 77%);
+            transform: translate(-2px, 2px);
+          }
+          36% {
+            clip-path: polygon(0 50%, 100% 50%, 100% 55%, 0 55%);
+            transform: translate(2px, 1px);
+          }
+          38% {
+            clip-path: polygon(0 50%, 100% 50%, 100% 55%, 0 55%);
+            transform: translate(-1px, -1px);
+          }
+          40% {
+            clip-path: polygon(0 12%, 100% 12%, 100% 8%, 0 8%);
+            transform: translate(1px, 2px);
+          }
+          42% {
+            clip-path: polygon(0 12%, 100% 12%, 100% 8%, 0 8%);
+            transform: translate(-2px, -2px);
+          }
+          44% {
+            clip-path: polygon(0 86%, 100% 86%, 100% 88%, 0 88%);
+            transform: translate(2px, 1px);
+          }
+          46% {
+            clip-path: polygon(0 86%, 100% 86%, 100% 88%, 0 88%);
+            transform: translate(-1px, 2px);
+          }
+          48% {
+            clip-path: polygon(0 33%, 100% 33%, 100% 28%, 0 28%);
+            transform: translate(1px, -1px);
+          }
+          50% {
+            clip-path: polygon(0 33%, 100% 33%, 100% 28%, 0 28%);
+            transform: translate(-2px, 1px);
+          }
+          52% {
+            clip-path: polygon(0 65%, 100% 65%, 100% 61%, 0 61%);
+            transform: translate(2px, -2px);
+          }
+          54% {
+            clip-path: polygon(0 65%, 100% 65%, 100% 61%, 0 61%);
+            transform: translate(-1px, 2px);
+          }
+          56% {
+            clip-path: polygon(0 95%, 100% 95%, 100% 98%, 0 98%);
+            transform: translate(1px, 1px);
+          }
+          58% {
+            clip-path: polygon(0 95%, 100% 95%, 100% 98%, 0 98%);
+            transform: translate(-2px, -1px);
+          }
+          60% {
+            clip-path: polygon(0 18%, 100% 18%, 100% 22%, 0 22%);
+            transform: translate(2px, 2px);
+          }
+          62% {
+            clip-path: polygon(0 18%, 100% 18%, 100% 22%, 0 22%);
+            transform: translate(-1px, -2px);
+          }
+          64% {
+            clip-path: polygon(0 72%, 100% 72%, 100% 74%, 0 74%);
+            transform: translate(1px, 1px);
+          }
+          66% {
+            clip-path: polygon(0 72%, 100% 72%, 100% 74%, 0 74%);
+            transform: translate(-2px, 2px);
+          }
+          68% {
+            clip-path: polygon(0 45%, 100% 45%, 100% 48%, 0 48%);
+            transform: translate(2px, -1px);
+          }
+          70% {
+            clip-path: polygon(0 45%, 100% 45%, 100% 48%, 0 48%);
+            transform: translate(-1px, 1px);
+          }
+          72% {
+            clip-path: polygon(0 84%, 100% 84%, 100% 90%, 0 90%);
+            transform: translate(1px, -2px);
+          }
+          74% {
+            clip-path: polygon(0 84%, 100% 84%, 100% 90%, 0 90%);
+            transform: translate(-2px, 2px);
+          }
+          76% {
+            clip-path: polygon(0 6%, 100% 6%, 100% 12%, 0 12%);
+            transform: translate(2px, 1px);
+          }
+          78% {
+            clip-path: polygon(0 6%, 100% 6%, 100% 12%, 0 12%);
+            transform: translate(-1px, -1px);
+          }
+          80% {
+            clip-path: polygon(0 58%, 100% 58%, 100% 62%, 0 62%);
+            transform: translate(1px, 2px);
+          }
+          82% {
+            clip-path: polygon(0 58%, 100% 58%, 100% 62%, 0 62%);
+            transform: translate(-2px, -2px);
+          }
+          84% {
+            clip-path: polygon(0 26%, 100% 26%, 100% 30%, 0 30%);
+            transform: translate(2px, 1px);
+          }
+          86% {
+            clip-path: polygon(0 26%, 100% 26%, 100% 30%, 0 30%);
+            transform: translate(-1px, 2px);
+          }
+          88% {
+            clip-path: polygon(0 80%, 100% 80%, 100% 82%, 0 82%);
+            transform: translate(1px, -1px);
+          }
+          90% {
+            clip-path: polygon(0 80%, 100% 80%, 100% 82%, 0 82%);
+            transform: translate(-2px, 1px);
+          }
+          92% {
+            clip-path: polygon(0 36%, 100% 36%, 100% 42%, 0 42%);
+            transform: translate(2px, -2px);
+          }
+          94% {
+            clip-path: polygon(0 36%, 100% 36%, 100% 42%, 0 42%);
+            transform: translate(-1px, 2px);
+          }
+          96% {
+            clip-path: polygon(0 92%, 100% 92%, 100% 96%, 0 96%);
+            transform: translate(1px, 1px);
+          }
+          98% {
+            clip-path: polygon(0 92%, 100% 92%, 100% 96%, 0 96%);
+            transform: translate(-2px, -1px);
+          }
+          100% {
+            clip-path: polygon(0 2%, 100% 2%, 100% 5%, 0 5%);
+            transform: translate(2px, 2px);
+          }
+        }
+        
+        @keyframes glitch-anim-2 {
+          0% {
+            clip-path: polygon(0 25%, 100% 25%, 100% 30%, 0 30%);
+            transform: translate(2px, -2px);
+          }
+          3% {
+            clip-path: polygon(0 3%, 100% 3%, 100% 3%, 0 3%);
+            transform: translate(-1px, 2px);
+          }
+          5% {
+            clip-path: polygon(0 90%, 100% 90%, 100% 90%, 0 90%);
+            transform: translate(2px, 1px);
+          }
+          7% {
+            clip-path: polygon(0 43%, 100% 43%, 100% 43%, 0 43%);
+            transform: translate(-2px, -1px);
+          }
+          9% {
+            clip-path: polygon(0 69%, 100% 69%, 100% 69%, 0 69%);
+            transform: translate(1px, 2px);
+          }
+          11% {
+            clip-path: polygon(0 15%, 100% 15%, 100% 15%, 0 15%);
+            transform: translate(2px, -2px);
+          }
+          13% {
+            clip-path: polygon(0 58%, 100% 58%, 100% 58%, 0 58%);
+            transform: translate(-1px, 1px);
+          }
+          15% {
+            clip-path: polygon(0 88%, 100% 88%, 100% 88%, 0 88%);
+            transform: translate(1px, -1px);
+          }
+          17% {
+            clip-path: polygon(0 34%, 100% 34%, 100% 34%, 0 34%);
+            transform: translate(-2px, 2px);
+          }
+          19% {
+            clip-path: polygon(0 77%, 100% 77%, 100% 77%, 0 77%);
+            transform: translate(2px, 1px);
+          }
+          21% {
+            clip-path: polygon(0 6%, 100% 6%, 100% 6%, 0 6%);
+            transform: translate(-1px, -2px);
+          }
+          23% {
+            clip-path: polygon(0 51%, 100% 51%, 100% 51%, 0 51%);
+            transform: translate(1px, 2px);
+          }
+          25% {
+            clip-path: polygon(0 82%, 100% 82%, 100% 82%, 0 82%);
+            transform: translate(2px, -1px);
+          }
+          27% {
+            clip-path: polygon(0 18%, 100% 18%, 100% 18%, 0 18%);
+            transform: translate(-2px, 1px);
+          }
+          29% {
+            clip-path: polygon(0 63%, 100% 63%, 100% 63%, 0 63%);
+            transform: translate(1px, -2px);
+          }
+          31% {
+            clip-path: polygon(0 95%, 100% 95%, 100% 95%, 0 95%);
+            transform: translate(-1px, 2px);
+          }
+          33% {
+            clip-path: polygon(0 29%, 100% 29%, 100% 29%, 0 29%);
+            transform: translate(2px, 1px);
+          }
+          35% {
+            clip-path: polygon(0 74%, 100% 74%, 100% 74%, 0 74%);
+            transform: translate(-2px, -1px);
+          }
+          37% {
+            clip-path: polygon(0 11%, 100% 11%, 100% 11%, 0 11%);
+            transform: translate(1px, 2px);
+          }
+          39% {
+            clip-path: polygon(0 56%, 100% 56%, 100% 56%, 0 56%);
+            transform: translate(2px, -2px);
+          }
+          41% {
+            clip-path: polygon(0 87%, 100% 87%, 100% 87%, 0 87%);
+            transform: translate(-1px, 1px);
+          }
+          43% {
+            clip-path: polygon(0 32%, 100% 32%, 100% 32%, 0 32%);
+            transform: translate(1px, -1px);
+          }
+          45% {
+            clip-path: polygon(0 79%, 100% 79%, 100% 79%, 0 79%);
+            transform: translate(-2px, 2px);
+          }
+          47% {
+            clip-path: polygon(0 14%, 100% 14%, 100% 14%, 0 14%);
+            transform: translate(2px, 1px);
+          }
+          49% {
+            clip-path: polygon(0 65%, 100% 65%, 100% 65%, 0 65%);
+            transform: translate(-1px, -2px);
+          }
+          51% {
+            clip-path: polygon(0 92%, 100% 92%, 100% 92%, 0 92%);
+            transform: translate(1px, 2px);
+          }
+          53% {
+            clip-path: polygon(0 38%, 100% 38%, 100% 38%, 0 38%);
+            transform: translate(2px, -1px);
+          }
+          55% {
+            clip-path: polygon(0 71%, 100% 71%, 100% 71%, 0 71%);
+            transform: translate(-2px, 1px);
+          }
+          57% {
+            clip-path: polygon(0 23%, 100% 23%, 100% 23%, 0 23%);
+            transform: translate(1px, -2px);
+          }
+          59% {
+            clip-path: polygon(0 86%, 100% 86%, 100% 86%, 0 86%);
+            transform: translate(-1px, 2px);
+          }
+          61% {
+            clip-path: polygon(0 47%, 100% 47%, 100% 47%, 0 47%);
+            transform: translate(2px, 1px);
+          }
+          63% {
+            clip-path: polygon(0 9%, 100% 9%, 100% 9%, 0 9%);
+            transform: translate(-2px, -1px);
+          }
+          65% {
+            clip-path: polygon(0 54%, 100% 54%, 100% 54%, 0 54%);
+            transform: translate(1px, 2px);
+          }
+          67% {
+            clip-path: polygon(0 83%, 100% 83%, 100% 83%, 0 83%);
+            transform: translate(2px, -2px);
+          }
+          69% {
+            clip-path: polygon(0 35%, 100% 35%, 100% 35%, 0 35%);
+            transform: translate(-1px, 1px);
+          }
+          71% {
+            clip-path: polygon(0 76%, 100% 76%, 100% 76%, 0 76%);
+            transform: translate(1px, -1px);
+          }
+          73% {
+            clip-path: polygon(0 20%, 100% 20%, 100% 20%, 0 20%);
+            transform: translate(-2px, 2px);
+          }
+          75% {
+            clip-path: polygon(0 61%, 100% 61%, 100% 61%, 0 61%);
+            transform: translate(2px, 1px);
+          }
+          77% {
+            clip-path: polygon(0 4%, 100% 4%, 100% 4%, 0 4%);
+            transform: translate(-1px, -2px);
+          }
+          79% {
+            clip-path: polygon(0 49%, 100% 49%, 100% 49%, 0 49%);
+            transform: translate(1px, 2px);
+          }
+          81% {
+            clip-path: polygon(0 85%, 100% 85%, 100% 85%, 0 85%);
+            transform: translate(2px, -1px);
+          }
+          83% {
+            clip-path: polygon(0 27%, 100% 27%, 100% 27%, 0 27%);
+            transform: translate(-2px, 1px);
+          }
+          85% {
+            clip-path: polygon(0 72%, 100% 72%, 100% 72%, 0 72%);
+            transform: translate(1px, -2px);
+          }
+          87% {
+            clip-path: polygon(0 16%, 100% 16%, 100% 16%, 0 16%);
+            transform: translate(-1px, 2px);
+          }
+          89% {
+            clip-path: polygon(0 59%, 100% 59%, 100% 59%, 0 59%);
+            transform: translate(2px, 1px);
+          }
+          91% {
+            clip-path: polygon(0 91%, 100% 91%, 100% 91%, 0 91%);
+            transform: translate(-2px, -1px);
+          }
+          93% {
+            clip-path: polygon(0 41%, 100% 41%, 100% 41%, 0 41%);
+            transform: translate(1px, 2px);
+          }
+          95% {
+            clip-path: polygon(0 75%, 100% 75%, 100% 75%, 0 75%);
+            transform: translate(2px, -2px);
+          }
+          97% {
+            clip-path: polygon(0 12%, 100% 12%, 100% 12%, 0 12%);
+            transform: translate(-1px, 1px);
+          }
+          100% {
+            clip-path: polygon(0 25%, 100% 25%, 100% 30%, 0 30%);
+            transform: translate(1px, -1px);
+          }
+        }
+        
+        @keyframes glitch-skew {
+          0% {
+            transform: skew(0deg);
+            filter: hue-rotate(0deg) saturate(1) brightness(1);
+          }
+          10% {
+            transform: skew(2deg);
+            filter: hue-rotate(90deg) saturate(1.2) brightness(1.1);
+          }
+          20% {
+            transform: skew(-1deg);
+            filter: hue-rotate(180deg) saturate(0.8) brightness(0.9);
+          }
+          30% {
+            transform: skew(3deg);
+            filter: hue-rotate(270deg) saturate(1.4) brightness(1.2);
+          }
+          40% {
+            transform: skew(-2deg);
+            filter: hue-rotate(360deg) saturate(0.6) brightness(0.8);
+          }
+          50% {
+            transform: skew(1deg);
+            filter: hue-rotate(45deg) saturate(1.1) brightness(1.05);
+          }
+          60% {
+            transform: skew(-3deg);
+            filter: hue-rotate(135deg) saturate(1.3) brightness(1.15);
+          }
+          70% {
+            transform: skew(2deg);
+            filter: hue-rotate(225deg) saturate(0.9) brightness(0.95);
+          }
+          80% {
+            transform: skew(-1deg);
+            filter: hue-rotate(315deg) saturate(1.2) brightness(1.1);
+          }
+          90% {
+            transform: skew(1.5deg);
+            filter: hue-rotate(60deg) saturate(0.7) brightness(0.85);
+          }
+          100% {
+            transform: skew(0deg);
+            filter: hue-rotate(0deg) saturate(1) brightness(1);
+          }
+        }
+        
+        .glitch-intense:hover {
+          animation-duration: 0.8s;
+        }
+        
+        .glitch-intense:hover::before {
+          animation-duration: 1.2s;
+        }
+        
+        .glitch-intense:hover::after {
+          animation-duration: 1s;
+        }
+        
+        /* Digital noise overlay */
+        .glitch-noise {
+          position: relative;
+          overflow: hidden;
+        }
+        
+        .glitch-noise::after {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background-image: 
+            radial-gradient(circle, transparent 20%, rgba(255, 0, 24, 0.3) 20.5%, rgba(255, 0, 24, 0.3) 21%, transparent 21.5%),
+            linear-gradient(90deg, transparent 24%, rgba(0, 255, 249, 0.2) 25%, rgba(0, 255, 249, 0.2) 26%, transparent 27%),
+            linear-gradient(90deg, transparent 74%, rgba(255, 0, 24, 0.2) 75%, rgba(255, 0, 24, 0.2) 76%, transparent 77%);
+          background-size: 75px 65px, 50px 50px, 80px 80px;
+          animation: glitch-noise 0.8s steps(8) infinite;
+          opacity: 0;
+          pointer-events: none;
+        }
+        
+        .glitch-noise:hover::after {
+          opacity: 1;
+        }
+        
+        @keyframes glitch-noise {
+          0% { background-position: 0 0, 0 0, 0 0; }
+          12.5% { background-position: -5px -2px, 2px -1px, -1px 3px; }
+          25% { background-position: 2px -4px, -1px 2px, 3px -2px; }
+          37.5% { background-position: -3px 1px, 3px -3px, -2px 1px; }
+          50% { background-position: 1px -2px, -2px 2px, 2px -3px; }
+          62.5% { background-position: -2px 3px, 1px -1px, -3px 2px; }
+          75% { background-position: 3px -1px, -3px 3px, 1px -2px; }
+          87.5% { background-position: -1px 2px, 2px -2px, -2px -1px; }
+          100% { background-position: 0 0, 0 0, 0 0; }
+        }
+      `}</style>
+      
       <div className="fixed inset-0 z-0">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-900/10 via-purple-900/10 to-teal-900/10"></div>
         <div className="floating-particles"></div>
@@ -1050,12 +1783,19 @@ ADDITIONAL INFORMATION:
         <div className="absolute inset-0">
           <div className="hero-gradient"></div>
           <div className="geometric-shapes"></div>
+          {/* 3D Force Graph Background */}
+          <div 
+            ref={forceGraphRef} 
+            className="absolute inset-0 opacity-40 pointer-events-auto"
+            style={{ zIndex: 1 }}
+            title="Click to regenerate network"
+          ></div>
         </div>
         
         <div className="relative z-10 text-center max-w-5xl mx-auto">
           <div className={`transition-all duration-1000 ${isLoaded ? 'animate-fade-in-up' : 'opacity-0 translate-y-10'}`}>
             <h1 className="hero-title text-4xl sm:text-6xl md:text-8xl font-bold mb-6">
-              <span className="inline-block animate-text-shimmer bg-gradient-to-r from-blue-400 via-purple-400 to-teal-400 bg-clip-text text-transparent bg-300% animate-gradient">
+              <span className="glitch-intense glitch-noise inline-block bg-gradient-to-r from-blue-400 via-purple-400 to-teal-400 bg-clip-text text-transparent" data-text="AMIN NAJAFGHOLIZADEH">
                 Amin Najafgholizadeh
               </span>
             </h1>
@@ -1165,8 +1905,177 @@ ADDITIONAL INFORMATION:
         </div>
       </section>
 
+      {/* Tech Parallax Transition Section */}
+      <section ref={parallaxRef} className="relative h-screen overflow-hidden">
+        {/* Dynamic Tech Innovation Background */}
+        <div className="absolute inset-0">
+          {/* Circuit Board Base */}
+          <div className="absolute inset-0 bg-gray-900" />
+          <div className="absolute inset-0 opacity-30" style={{
+            backgroundImage: `
+              repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(59, 130, 246, 0.1) 2px, rgba(59, 130, 246, 0.1) 4px),
+              repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(20, 184, 166, 0.1) 2px, rgba(20, 184, 166, 0.1) 4px)
+            `,
+            backgroundSize: '50px 50px'
+          }} />
+          
+          {/* Flowing Data Streams */}
+          <div className="absolute inset-0">
+            <div className="absolute top-1/4 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-blue-400 to-transparent opacity-60 animate-pulse" />
+            <div className="absolute top-2/5 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-teal-400 to-transparent opacity-60 animate-pulse" style={{ animationDelay: '1.5s' }} />
+            <div className="absolute bottom-2/5 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-blue-400 to-transparent opacity-60 animate-pulse" style={{ animationDelay: '3s' }} />
+            <div className="absolute bottom-1/4 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-teal-400 to-transparent opacity-60 animate-pulse" style={{ animationDelay: '4.5s' }} />
+          </div>
+          
+          {/* Circuit Nodes */}
+          <div className="absolute top-1/4 left-1/5 w-3 h-3 bg-blue-400 rounded-full animate-ping opacity-75" />
+          <div className="absolute top-2/5 right-1/4 w-2 h-2 bg-teal-400 rounded-full animate-ping opacity-75" style={{ animationDelay: '1s' }} />
+          <div className="absolute bottom-2/5 left-1/3 w-2.5 h-2.5 bg-blue-400 rounded-full animate-ping opacity-75" style={{ animationDelay: '2s' }} />
+          <div className="absolute bottom-1/4 right-1/5 w-2 h-2 bg-teal-400 rounded-full animate-ping opacity-75" style={{ animationDelay: '3s' }} />
+          
+          {/* Tech Grid Overlay */}
+          <div className="absolute inset-0 opacity-20" style={{
+            backgroundImage: `
+              radial-gradient(circle at 25% 25%, rgba(59, 130, 246, 0.4) 0%, transparent 50%),
+              radial-gradient(circle at 75% 75%, rgba(20, 184, 166, 0.4) 0%, transparent 50%)
+            `,
+            backgroundSize: '400px 400px'
+          }} />
+        </div>
+        <svg 
+          viewBox="0 0 1200 800" 
+          className="absolute inset-0 w-full h-full"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          {/* Background Tech Grid */}
+          <defs>
+            <pattern id="circuit-pattern" patternUnits="userSpaceOnUse" width="100" height="100">
+              <rect width="100" height="100" fill="rgba(59, 130, 246, 0.05)" />
+              <path d="M 0,50 L 50,50 L 50,0" stroke="rgba(59, 130, 246, 0.2)" strokeWidth="1" fill="none" />
+              <path d="M 50,100 L 50,50 L 100,50" stroke="rgba(59, 130, 246, 0.2)" strokeWidth="1" fill="none" />
+              <circle cx="50" cy="50" r="3" fill="rgba(59, 130, 246, 0.4)" />
+            </pattern>
+            
+            <pattern id="data-pattern" patternUnits="userSpaceOnUse" width="80" height="80">
+              <rect width="80" height="80" fill="transparent" />
+              <path d="M 0,40 Q 20,20 40,40 T 80,40" stroke="rgba(59, 130, 246, 0.3)" strokeWidth="2" fill="none" />
+            </pattern>
+
+            <linearGradient id="data-flow-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="rgba(59, 130, 246, 0)" />
+              <stop offset="50%" stopColor="rgba(59, 130, 246, 0.8)" />
+              <stop offset="100%" stopColor="rgba(20, 184, 166, 0)" />
+            </linearGradient>
+
+            <filter id="glow">
+              <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+              <feMerge> 
+                <feMergeNode in="coloredBlur"/>
+                <feMergeNode in="SourceGraphic"/> 
+              </feMerge>
+            </filter>
+          </defs>
+
+          {/* Background Layer */}
+          <rect className="parallax-bg" width="100%" height="100%" fill="url(#circuit-pattern)" />
+          
+          {/* Circuit Board Mountains */}
+          <g className="parallax-circuit1">
+            <path d="M 0,600 Q 200,400 400,500 T 800,450 L 1200,480 L 1200,800 L 0,800 Z" 
+                  fill="rgba(31, 41, 55, 0.8)" stroke="rgba(59, 130, 246, 0.3)" strokeWidth="2" />
+            <circle cx="300" cy="480" r="8" fill="rgba(59, 130, 246, 0.6)" className="floating-hex" />
+            <rect x="600" y="440" width="16" height="16" fill="rgba(139, 92, 246, 0.6)" className="floating-hex" />
+            <polygon points="900,460 920,440 940,460 920,480" fill="rgba(20, 184, 166, 0.6)" className="floating-hex" />
+          </g>
+
+          {/* Mid Circuit Layer */}
+          <g className="parallax-circuit2">
+            <path d="M 0,700 Q 300,550 600,600 T 1200,580 L 1200,800 L 0,800 Z" 
+                  fill="rgba(17, 24, 39, 0.9)" stroke="rgba(139, 92, 246, 0.4)" strokeWidth="2" />
+            <circle cx="450" cy="580" r="6" fill="rgba(139, 92, 246, 0.8)" className="floating-hex" />
+            <rect x="750" y="570" width="12" height="12" fill="rgba(59, 130, 246, 0.8)" className="floating-hex" />
+          </g>
+
+          {/* Data Flow Streams */}
+          <g className="parallax-data-flow">
+            <path className="data-stream" 
+                  d="M 50,200 Q 200,150 350,200 T 650,180 Q 800,160 950,200 T 1150,180" 
+                  stroke="url(#data-flow-gradient)" 
+                  strokeWidth="3" 
+                  fill="none" 
+                  strokeDasharray="20 10" 
+                  filter="url(#glow)" />
+            <path className="data-stream" 
+                  d="M 100,350 Q 250,300 400,350 T 700,330 Q 850,310 1000,350" 
+                  stroke="url(#data-flow-gradient)" 
+                  strokeWidth="2" 
+                  fill="none" 
+                  strokeDasharray="15 8" 
+                  filter="url(#glow)" />
+          </g>
+
+          {/* Floating Code Elements */}
+          <g className="parallax-code">
+            <text x="200" y="250" fill="rgba(59, 130, 246, 0.7)" fontSize="14" fontFamily="monospace" className="floating-binary">
+              {'01001000 01100101 01101100 01101100 01101111'}
+            </text>
+            <text x="800" y="320" fill="rgba(59, 130, 246, 0.7)" fontSize="12" fontFamily="monospace" className="floating-binary">
+              {'function deploy() {'}
+            </text>
+            <text x="820" y="340" fill="rgba(20, 184, 166, 0.7)" fontSize="12" fontFamily="monospace" className="floating-binary">
+              {'  return success;'}
+            </text>
+            <text x="800" y="360" fill="rgba(59, 130, 246, 0.7)" fontSize="12" fontFamily="monospace" className="floating-binary">
+              {'}'}
+            </text>
+          </g>
+
+          {/* Network Nodes */}
+          <g className="parallax-nodes">
+            <circle cx="150" cy="300" r="4" fill="rgba(59, 130, 246, 0.8)" filter="url(#glow)" className="floating-hex" />
+            <circle cx="350" cy="280" r="3" fill="rgba(139, 92, 246, 0.8)" filter="url(#glow)" className="floating-hex" />
+            <circle cx="550" cy="320" r="5" fill="rgba(20, 184, 166, 0.8)" filter="url(#glow)" className="floating-hex" />
+            <circle cx="750" cy="290" r="4" fill="rgba(59, 130, 246, 0.8)" filter="url(#glow)" className="floating-hex" />
+            <circle cx="950" cy="310" r="3" fill="rgba(139, 92, 246, 0.8)" filter="url(#glow)" className="floating-hex" />
+            
+            {/* Connecting Lines */}
+            <line x1="150" y1="300" x2="350" y2="280" stroke="rgba(59, 130, 246, 0.4)" strokeWidth="1" />
+            <line x1="350" y1="280" x2="550" y2="320" stroke="rgba(139, 92, 246, 0.4)" strokeWidth="1" />
+            <line x1="550" y1="320" x2="750" y2="290" stroke="rgba(20, 184, 166, 0.4)" strokeWidth="1" />
+            <line x1="750" y1="290" x2="950" y2="310" stroke="rgba(59, 130, 246, 0.4)" strokeWidth="1" />
+          </g>
+
+          {/* Floating Tech Icons */}
+          <g className="parallax-nodes">
+            <rect x="100" y="400" width="20" height="20" rx="3" fill="rgba(59, 130, 246, 0.6)" className="floating-hex" />
+            <polygon points="400,420 410,400 420,420 410,440" fill="rgba(139, 92, 246, 0.6)" className="floating-hex" />
+            <rect x="700" y="380" width="16" height="16" rx="8" fill="rgba(20, 184, 166, 0.6)" className="floating-hex" />
+            <polygon points="1000,400 1015,385 1030,400 1015,415" fill="rgba(59, 130, 246, 0.6)" className="floating-hex" />
+          </g>
+
+          {/* Central Focus Text */}
+          <g className="relative z-10">
+            <text x="600" y="400" textAnchor="middle" fill="rgba(255, 255, 255, 0.9)" 
+                  fontSize="48" fontWeight="bold" fontFamily="Inter, sans-serif" filter="url(#glow)">
+              {'INNOVATION'}
+            </text>
+            <text x="600" y="450" textAnchor="middle" fill="rgba(139, 92, 246, 0.8)" 
+                  fontSize="24" fontFamily="Inter, sans-serif">
+              {'Through Technology'}
+            </text>
+          </g>
+        </svg>
+
+        {/* Scroll Indicator */}
+        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 text-center">
+          <div className="animate-bounce-slow opacity-60">
+            <ChevronDown className="text-blue-400 animate-pulse" size={32} />
+          </div>
+        </div>
+      </section>
+
       {/* Experience Section */}
-      <section id="experience" className="py-20 relative">
+      <section id="experience" className="py-20 relative bg-gradient-to-br from-gray-900 via-purple-950/20 to-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="section-title text-4xl sm:text-5xl font-bold text-center mb-16">
             <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
@@ -1174,23 +2083,336 @@ ADDITIONAL INFORMATION:
             </span>
           </h2>
           
-          <div className="relative">
-            <div className="hidden md:block timeline-line absolute left-1/2 transform -translate-x-1/2 h-full w-1 bg-gradient-to-b from-blue-500 via-purple-500 to-teal-500 rounded-full"></div>
-            
-            <div className="space-y-16">
+          {/* Interactive Experience Slider */}
+          <div className="relative max-w-5xl mx-auto">
+            <Swiper
+              modules={[Navigation, Pagination, EffectFade, Mousewheel]}
+              spaceBetween={30}
+              effect="fade"
+              loop={true}
+              autoHeight={true}
+              mousewheel={{
+                invert: false,
+                forceToAxis: false,
+                sensitivity: 1,
+                releaseOnEdges: false,
+              }}
+              pagination={{
+                el: '.experience-pagination',
+                clickable: true,
+              }}
+              className="experience-slider"
+            >
               {knowledgeBase.experience.map((item, index) => (
-                <ExperienceItem
-                  key={index}
-                  title={item.title}
-                  company={item.company}
-                  location={item.location}
-                  period={item.period}
-                  description={item.description.split('. ')}
-                  isLeft={index % 2 !== 0}
-                  delay={index * 200}
-                />
+                <SwiperSlide key={index}>
+                  <div className="experience-slide relative overflow-hidden">
+                    {/* Holographic Card Container */}
+                    <div className="holographic-card group relative bg-gradient-to-br from-slate-900/80 via-purple-900/20 to-slate-900/80 backdrop-blur-xl border border-cyan-400/30 rounded-3xl p-1 shadow-2xl transform-gpu hover:scale-[1.02] transition-all duration-700">
+                      
+                      {/* Animated Border */}
+                      <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-cyan-400/50 via-purple-500/50 to-pink-500/50 opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-pulse" />
+                      <div className="absolute inset-[2px] rounded-3xl bg-gradient-to-br from-slate-900/95 via-purple-900/30 to-slate-900/95 backdrop-blur-xl" />
+                      
+                      {/* Particle Field Background */}
+                      <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
+                        <div className="particles-container absolute inset-0">
+                          {[...Array(15)].map((_, i) => (
+                            <div key={i} className={`particle particle-${i} absolute w-1 h-1 bg-cyan-400/60 rounded-full animate-ping`} 
+                                 style={{
+                                   left: `${Math.random() * 100}%`,
+                                   top: `${Math.random() * 100}%`,
+                                   animationDelay: `${Math.random() * 3}s`,
+                                   animationDuration: `${2 + Math.random() * 2}s`
+                                 }} />
+                          ))}
+                        </div>
+                      </div>
+                      
+                      <div className="relative z-10 flex flex-col lg:flex-row items-center p-8">
+                        {/* Futuristic Experience Visualization */}
+                        <div className="experience-visual relative w-full lg:w-96 h-80 flex-shrink-0 mb-8 lg:mb-0 lg:mr-10">
+                          {/* Holographic Display */}
+                          <div className="absolute inset-0 rounded-2xl overflow-hidden bg-gradient-to-br from-cyan-500/20 via-purple-600/20 to-pink-500/20 border border-cyan-400/40">
+                            {/* Scanning Lines */}
+                            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-cyan-400/10 to-transparent animate-pulse" />
+                            <div className="absolute top-0 left-0 w-full h-0.5 bg-cyan-400/50 animate-bounce" style={{ animationDuration: '3s' }} />
+                            
+                            {/* 3D Isometric Grid */}
+                            <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 320">
+                              <defs>
+                                <pattern id="grid-pattern" patternUnits="userSpaceOnUse" width="40" height="40">
+                                  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(34, 211, 238, 0.2)" strokeWidth="0.5"/>
+                                </pattern>
+                                <linearGradient id="holo-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                  <stop offset="0%" stopColor="rgba(34, 211, 238, 0.8)" />
+                                  <stop offset="50%" stopColor="rgba(168, 85, 247, 0.6)" />
+                                  <stop offset="100%" stopColor="rgba(236, 72, 153, 0.8)" />
+                                </linearGradient>
+                              </defs>
+                              
+                              {/* Grid Background */}
+                              <rect width="100%" height="100%" fill="url(#grid-pattern)" />
+                              
+                              {/* Central Hexagon */}
+                              <polygon points="200,100 240,130 240,190 200,220 160,190 160,130" 
+                                       fill="url(#holo-gradient)" opacity="0.3" className="animate-pulse" />
+                              
+                              {/* Data Streams */}
+                              <path d="M 50,160 Q 100,140 150,160 T 250,140 Q 300,120 350,140" 
+                                    stroke="rgba(34, 211, 238, 0.6)" strokeWidth="2" fill="none" 
+                                    className="animate-pulse" strokeDasharray="10 5" />
+                              
+                              {/* Floating Data Points */}
+                              <circle cx="100" cy="150" r="3" fill="rgba(34, 211, 238, 0.8)" className="animate-ping" />
+                              <circle cx="300" cy="130" r="2.5" fill="rgba(168, 85, 247, 0.8)" className="animate-ping" style={{ animationDelay: '0.5s' }} />
+                              <circle cx="200" cy="200" r="2" fill="rgba(236, 72, 153, 0.8)" className="animate-ping" style={{ animationDelay: '1s' }} />
+                            </svg>
+                            
+                            {/* Company Hologram */}
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <div className="text-center text-white transform group-hover:scale-110 transition-transform duration-500">
+                                <div className="text-4xl mb-3 filter drop-shadow-lg animate-bounce" style={{ animationDuration: '3s' }}>🏢</div>
+                                <div className="text-xl font-bold bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent mb-1">
+                                  {item.company}
+                                </div>
+                                <div className="text-sm text-cyan-300/80 font-medium">{item.location}</div>
+                              </div>
+                            </div>
+                            
+                            {/* Corner Brackets */}
+                            <div className="absolute top-2 left-2 w-6 h-6 border-l-2 border-t-2 border-cyan-400/60" />
+                            <div className="absolute top-2 right-2 w-6 h-6 border-r-2 border-t-2 border-cyan-400/60" />
+                            <div className="absolute bottom-2 left-2 w-6 h-6 border-l-2 border-b-2 border-cyan-400/60" />
+                            <div className="absolute bottom-2 right-2 w-6 h-6 border-r-2 border-b-2 border-cyan-400/60" />
+                          </div>
+                        </div>
+                        
+                        {/* Advanced Experience Content */}
+                        <div className="experience-content flex-1 text-center lg:text-left space-y-6">
+                          {/* Timeline Badge */}
+                          <div className="relative inline-block">
+                            <div className="absolute -inset-2 bg-gradient-to-r from-cyan-400/20 to-purple-500/20 rounded-full blur-sm" />
+                            <span className="relative inline-flex items-center px-6 py-3 text-sm font-bold text-cyan-300 bg-slate-800/80 border border-cyan-400/40 rounded-full backdrop-blur-sm">
+                              <Clock className="mr-2" size={14} />
+                              {item.period}
+                            </span>
+                          </div>
+                          
+                          {/* Job Title with Glitch Effect */}
+                          <h3 className="text-3xl lg:text-4xl font-black text-white mb-4 relative group-hover:animate-pulse">
+                            <span className="bg-gradient-to-r from-white via-cyan-300 to-purple-300 bg-clip-text text-transparent">
+                              {item.title}
+                            </span>
+                          </h3>
+                          
+                          {/* Company Info */}
+                          <div className="flex items-center justify-center lg:justify-start space-x-4 text-lg font-semibold">
+                            <span className="text-cyan-400">{item.company}</span>
+                            <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse" />
+                            <span className="text-purple-300">{item.location}</span>
+                          </div>
+                          
+                          {/* Neural Network Description */}
+                          <div className="space-y-4 text-gray-300 leading-relaxed">
+                            {item.description.split('. ').map((desc, i) => (
+                              <div key={i} className="relative group/desc">
+                                <div className="absolute -left-4 top-2 w-2 h-2 bg-cyan-400/60 rounded-full opacity-0 group-hover/desc:opacity-100 transition-opacity" />
+                                <p className="text-base pl-6 transform group-hover/desc:translate-x-2 transition-transform duration-300">
+                                  {desc.trim()}{i < item.description.split('. ').length - 1 && '.'}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                          
+                          {/* Futuristic Action Button */}
+                          <div className="pt-4">
+                            <button className="group/btn relative inline-flex items-center px-8 py-4 bg-gradient-to-r from-cyan-500 to-purple-600 text-white font-bold rounded-2xl overflow-hidden transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-cyan-500/25">
+                              <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-purple-500 opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300" />
+                              <span className="relative z-10 mr-3">ANALYZE EXPERIENCE</span>
+                              <div className="relative z-10 w-6 h-6 border-2 border-white/60 rounded-full flex items-center justify-center group-hover/btn:rotate-90 transition-transform duration-300">
+                                <ChevronRight size={12} />
+                              </div>
+                              <div className="absolute inset-0 opacity-0 group-hover/btn:opacity-20 bg-white animate-pulse" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </SwiperSlide>
               ))}
-            </div>
+            </Swiper>
+            
+            {/* Custom Pagination */}
+            <div className="experience-pagination mt-8 flex justify-center" />
+          </div>
+        </div>
+      </section>
+
+      {/* Learning Evolution Parallax Section */}
+      <section ref={learningParallaxRef} className="relative h-screen overflow-hidden">
+        {/* Dynamic Neural Network Background */}
+        <div className="absolute inset-0">
+          {/* Brain Structure Base */}
+          <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-purple-950 to-gray-900" />
+          
+          {/* Neural Network Pattern */}
+          <div className="absolute inset-0 opacity-25" style={{
+            backgroundImage: `
+              radial-gradient(circle at 20% 30%, rgba(139, 92, 246, 0.3) 0%, transparent 40%),
+              radial-gradient(circle at 80% 20%, rgba(168, 85, 247, 0.2) 0%, transparent 35%),
+              radial-gradient(circle at 60% 70%, rgba(139, 92, 246, 0.25) 0%, transparent 45%),
+              radial-gradient(circle at 30% 80%, rgba(168, 85, 247, 0.2) 0%, transparent 40%)
+            `,
+            backgroundSize: '400px 400px, 350px 350px, 300px 300px, 380px 380px'
+          }} />
+          
+          {/* Synaptic Connections */}
+          <div className="absolute inset-0">
+            {/* Diagonal neural pathways */}
+            <div className="absolute top-1/4 left-1/4 w-1/2 h-0.5 bg-gradient-to-r from-purple-400 via-transparent to-purple-300 rotate-12 animate-pulse opacity-60" />
+            <div className="absolute top-1/3 right-1/4 w-1/3 h-0.5 bg-gradient-to-r from-violet-400 via-transparent to-violet-300 -rotate-45 animate-pulse opacity-60" style={{ animationDelay: '1s' }} />
+            <div className="absolute bottom-1/3 left-1/3 w-2/5 h-0.5 bg-gradient-to-r from-purple-400 via-transparent to-purple-300 rotate-45 animate-pulse opacity-60" style={{ animationDelay: '2s' }} />
+            <div className="absolute bottom-1/4 right-1/3 w-1/3 h-0.5 bg-gradient-to-r from-violet-400 via-transparent to-violet-300 -rotate-12 animate-pulse opacity-60" style={{ animationDelay: '3s' }} />
+          </div>
+          
+          {/* Neural Nodes (Brain Synapses) */}
+          <div className="absolute top-1/4 left-1/5 w-4 h-4 bg-purple-400 rounded-full animate-ping opacity-70" />
+          <div className="absolute top-1/3 right-1/4 w-3 h-3 bg-violet-400 rounded-full animate-ping opacity-70" style={{ animationDelay: '1s' }} />
+          <div className="absolute bottom-1/3 left-2/5 w-3.5 h-3.5 bg-purple-400 rounded-full animate-ping opacity-70" style={{ animationDelay: '2s' }} />
+          <div className="absolute bottom-1/4 right-1/5 w-3 h-3 bg-violet-400 rounded-full animate-ping opacity-70" style={{ animationDelay: '3s' }} />
+          <div className="absolute top-1/2 left-1/2 w-2.5 h-2.5 bg-purple-300 rounded-full animate-ping opacity-70" style={{ animationDelay: '1.5s' }} />
+          
+          {/* Brain Wave Activity */}
+          <div className="absolute inset-0 opacity-30">
+            <div className="absolute top-1/6 left-0 w-full h-px bg-gradient-to-r from-transparent via-purple-400 to-transparent animate-pulse" />
+            <div className="absolute top-1/3 left-0 w-full h-px bg-gradient-to-r from-transparent via-violet-400 to-transparent animate-pulse" style={{ animationDelay: '2s' }} />
+            <div className="absolute bottom-1/3 left-0 w-full h-px bg-gradient-to-r from-transparent via-purple-400 to-transparent animate-pulse" style={{ animationDelay: '4s' }} />
+          </div>
+        </div>
+        <svg 
+          viewBox="0 0 1200 800" 
+          className="absolute inset-0 w-full h-full"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <defs>
+            <pattern id="brain-pattern" patternUnits="userSpaceOnUse" width="120" height="120">
+              <rect width="120" height="120" fill="rgba(139, 92, 246, 0.05)" />
+              <circle cx="60" cy="60" r="2" fill="rgba(139, 92, 246, 0.3)" />
+              <path d="M 30,60 Q 60,30 90,60 Q 60,90 30,60" stroke="rgba(139, 92, 246, 0.2)" strokeWidth="1" fill="none" />
+            </pattern>
+            
+            <linearGradient id="neural-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="rgba(139, 92, 246, 0)" />
+              <stop offset="50%" stopColor="rgba(139, 92, 246, 0.6)" />
+              <stop offset="100%" stopColor="rgba(168, 85, 247, 0)" />
+            </linearGradient>
+
+            <filter id="neural-glow">
+              <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+              <feMerge> 
+                <feMergeNode in="coloredBlur"/>
+                <feMergeNode in="SourceGraphic"/> 
+              </feMerge>
+            </filter>
+          </defs>
+
+          {/* Neural Network Background */}
+          <rect className="parallax-bg" width="100%" height="100%" fill="url(#brain-pattern)" />
+          
+          {/* Neural Network Layers */}
+          <g className="parallax-circuit1">
+            <path d="M 0,500 Q 300,350 600,400 T 1200,380 L 1200,800 L 0,800 Z" 
+                  fill="rgba(75, 0, 130, 0.3)" stroke="rgba(139, 92, 246, 0.4)" strokeWidth="2" />
+            {/* Neural Nodes */}
+            <circle cx="200" cy="420" r="6" fill="rgba(139, 92, 246, 0.8)" className="floating-hex" filter="url(#neural-glow)" />
+            <circle cx="400" cy="380" r="8" fill="rgba(168, 85, 247, 0.8)" className="floating-hex" filter="url(#neural-glow)" />
+            <circle cx="600" cy="400" r="7" fill="rgba(139, 92, 246, 0.8)" className="floating-hex" filter="url(#neural-glow)" />
+            <circle cx="800" cy="370" r="6" fill="rgba(168, 85, 247, 0.8)" className="floating-hex" filter="url(#neural-glow)" />
+          </g>
+
+          {/* Deep Learning Layer */}
+          <g className="parallax-circuit2">
+            <path d="M 0,650 Q 400,500 800,550 T 1200,530 L 1200,800 L 0,800 Z" 
+                  fill="rgba(45, 0, 85, 0.4)" stroke="rgba(168, 85, 247, 0.5)" strokeWidth="2" />
+            <circle cx="350" cy="540" r="5" fill="rgba(168, 85, 247, 0.9)" className="floating-hex" filter="url(#neural-glow)" />
+            <circle cx="650" cy="520" r="6" fill="rgba(139, 92, 246, 0.9)" className="floating-hex" filter="url(#neural-glow)" />
+          </g>
+
+          {/* Knowledge Flow Streams */}
+          <g className="parallax-data-flow">
+            <path className="data-stream" 
+                  d="M 100,250 Q 300,200 500,250 T 900,230 Q 1050,210 1100,250" 
+                  stroke="url(#neural-gradient)" 
+                  strokeWidth="4" 
+                  fill="none" 
+                  strokeDasharray="25 15" 
+                  filter="url(#neural-glow)" />
+            <path className="data-stream" 
+                  d="M 150,400 Q 350,350 550,400 T 950,380" 
+                  stroke="url(#neural-gradient)" 
+                  strokeWidth="3" 
+                  fill="none" 
+                  strokeDasharray="20 12" 
+                  filter="url(#neural-glow)" />
+          </g>
+
+          {/* Floating ML/AI Code */}
+          <g className="parallax-code">
+            <text x="180" y="300" fill="rgba(139, 92, 246, 0.8)" fontSize="13" fontFamily="monospace" className="floating-binary">
+              {'model = Sequential()'}
+            </text>
+            <text x="700" y="280" fill="rgba(168, 85, 247, 0.8)" fontSize="12" fontFamily="monospace" className="floating-binary">
+              {'X_train, y_train = load_data()'}
+            </text>
+            <text x="250" y="500" fill="rgba(139, 92, 246, 0.7)" fontSize="11" fontFamily="monospace" className="floating-binary">
+              {'accuracy = model.evaluate()'}
+            </text>
+            <text x="800" y="450" fill="rgba(168, 85, 247, 0.7)" fontSize="12" fontFamily="monospace" className="floating-binary">
+              {'neural_network.fit()'}
+            </text>
+          </g>
+
+          {/* Learning Network Connections */}
+          <g className="parallax-nodes">
+            <circle cx="200" cy="200" r="4" fill="rgba(139, 92, 246, 0.9)" filter="url(#neural-glow)" className="floating-hex" />
+            <circle cx="400" cy="180" r="5" fill="rgba(168, 85, 247, 0.9)" filter="url(#neural-glow)" className="floating-hex" />
+            <circle cx="600" cy="220" r="4" fill="rgba(139, 92, 246, 0.9)" filter="url(#neural-glow)" className="floating-hex" />
+            <circle cx="800" cy="190" r="6" fill="rgba(168, 85, 247, 0.9)" filter="url(#neural-glow)" className="floating-hex" />
+            <circle cx="1000" cy="210" r="4" fill="rgba(139, 92, 246, 0.9)" filter="url(#neural-glow)" className="floating-hex" />
+            
+            {/* Neural Connections */}
+            <line x1="200" y1="200" x2="400" y2="180" stroke="rgba(139, 92, 246, 0.5)" strokeWidth="2" />
+            <line x1="400" y1="180" x2="600" y2="220" stroke="rgba(168, 85, 247, 0.5)" strokeWidth="2" />
+            <line x1="600" y1="220" x2="800" y2="190" stroke="rgba(139, 92, 246, 0.5)" strokeWidth="2" />
+            <line x1="800" y1="190" x2="1000" y2="210" stroke="rgba(168, 85, 247, 0.5)" strokeWidth="2" />
+          </g>
+
+          {/* Floating Learning Icons */}
+          <g className="parallax-nodes">
+            <polygon points="150,350 160,330 170,350 160,370" fill="rgba(139, 92, 246, 0.7)" className="floating-hex" />
+            <rect x="500" y="320" width="18" height="18" rx="4" fill="rgba(168, 85, 247, 0.7)" className="floating-hex" />
+            <circle cx="850" cy="340" r="9" fill="rgba(139, 92, 246, 0.6)" className="floating-hex" />
+            <polygon points="1100,360 1115,340 1130,360 1115,380" fill="rgba(168, 85, 247, 0.6)" className="floating-hex" />
+          </g>
+
+          {/* Central Focus Text */}
+          <g className="relative z-10">
+            <text x="600" y="400" textAnchor="middle" fill="rgba(255, 255, 255, 0.95)" 
+                  fontSize="46" fontWeight="bold" fontFamily="Inter, sans-serif" filter="url(#neural-glow)">
+              {'LEARNING'}
+            </text>
+            <text x="600" y="450" textAnchor="middle" fill="rgba(168, 85, 247, 0.9)" 
+                  fontSize="22" fontFamily="Inter, sans-serif">
+              {'Through Evolution'}
+            </text>
+          </g>
+        </svg>
+
+        {/* Scroll Indicator */}
+        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 text-center">
+          <div className="animate-bounce-slow opacity-60">
+            <ChevronDown className="text-purple-400 animate-pulse" size={32} />
           </div>
         </div>
       </section>
@@ -1215,6 +2437,203 @@ ADDITIONAL INFORMATION:
                 delay={index * 200}
               />
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Mastery Practice Parallax Section */}
+      <section ref={masteryParallaxRef} className="relative h-screen overflow-hidden">
+        {/* Dynamic Code Editor IDE Background */}
+        <div className="absolute inset-0">
+          {/* IDE Interface Base */}
+          <div className="absolute inset-0 bg-gray-900" />
+          
+          {/* Code Editor Windows */}
+          <div className="absolute top-4 left-4 right-4 bottom-4 bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+            {/* Title Bar */}
+            <div className="h-8 bg-gray-700 flex items-center px-4 text-sm text-gray-300 border-b border-gray-600">
+              <div className="flex space-x-2">
+                <div className="w-3 h-3 bg-red-500 rounded-full" />
+                <div className="w-3 h-3 bg-yellow-500 rounded-full" />
+                <div className="w-3 h-3 bg-green-500 rounded-full" />
+              </div>
+              <span className="ml-4">MLPipeline.py • main.tsx • docker-compose.yml</span>
+            </div>
+            
+            {/* Line Numbers and Code Area */}
+            <div className="flex h-full">
+              {/* Line Numbers */}
+              <div className="w-12 bg-gray-750 text-gray-500 text-xs font-mono pt-2 text-right pr-2">
+                <div>1</div><div>2</div><div>3</div><div>4</div><div>5</div><div>6</div><div>7</div><div>8</div><div>9</div><div>10</div><div>11</div><div>12</div><div>13</div><div>14</div><div>15</div>
+              </div>
+              
+              {/* Code Content */}
+              <div className="flex-1 bg-gray-800 text-sm font-mono pt-2 pl-4 text-emerald-400 opacity-60">
+                <div className="text-purple-400">class</div>
+                <div className="ml-4 text-emerald-400">def optimize_model():</div>
+                <div className="ml-8 text-blue-400">X_train, y_train = load_data()</div>
+                <div className="ml-8 text-yellow-400">model = Sequential()</div>
+                <div className="ml-8 text-pink-400">model.compile(optimizer='adam')</div>
+                <div className="ml-8 text-teal-400">return model.fit(X_train, y_train)</div>
+                <div />
+                <div className="text-gray-500"># Docker deployment config</div>
+                <div className="text-orange-400">FROM node:18-alpine</div>
+                <div className="text-cyan-400">WORKDIR /app</div>
+                <div className="text-green-400">COPY package*.json ./</div>
+                <div className="text-blue-400">RUN npm install</div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Terminal Window */}
+          <div className="absolute bottom-4 right-4 w-80 h-32 bg-black rounded border border-emerald-500 opacity-75">
+            <div className="h-6 bg-gray-800 flex items-center px-2 text-xs text-emerald-400 border-b border-emerald-500">
+              terminal
+            </div>
+            <div className="p-2 text-xs font-mono text-emerald-400">
+              <div>$ npm run build</div>
+              <div className="text-green-400">✓ Build complete in 2.3s</div>
+              <div>$ docker compose up -d</div>
+              <div className="text-blue-400 animate-pulse">Starting services...</div>
+            </div>
+          </div>
+          
+          {/* Floating Code Particles */}
+          <div className="absolute top-1/4 left-1/5 text-emerald-400 text-xs font-mono opacity-50 animate-ping">{`{}`}</div>
+          <div className="absolute top-1/3 right-1/4 text-teal-400 text-xs font-mono opacity-50 animate-ping" style={{ animationDelay: '1s' }}>{`[]`}</div>
+          <div className="absolute bottom-1/3 left-1/3 text-emerald-400 text-xs font-mono opacity-50 animate-ping" style={{ animationDelay: '2s' }}>{`()`}</div>
+          <div className="absolute bottom-1/4 right-1/5 text-teal-400 text-xs font-mono opacity-50 animate-ping" style={{ animationDelay: '3s' }}>{`<>`}</div>
+        </div>
+        <svg 
+          viewBox="0 0 1200 800" 
+          className="absolute inset-0 w-full h-full"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <defs>
+            <pattern id="code-matrix" patternUnits="userSpaceOnUse" width="80" height="80">
+              <rect width="80" height="80" fill="rgba(16, 185, 129, 0.03)" />
+              <text x="10" y="20" fill="rgba(16, 185, 129, 0.2)" fontSize="10" fontFamily="monospace">{'01'}</text>
+              <text x="50" y="50" fill="rgba(52, 211, 153, 0.2)" fontSize="8" fontFamily="monospace">{'def'}</text>
+              <text x="20" y="70" fill="rgba(16, 185, 129, 0.15)" fontSize="9" fontFamily="monospace">{'()'}</text>
+            </pattern>
+            
+            <linearGradient id="mastery-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="rgba(16, 185, 129, 0)" />
+              <stop offset="50%" stopColor="rgba(16, 185, 129, 0.8)" />
+              <stop offset="100%" stopColor="rgba(52, 211, 153, 0)" />
+            </linearGradient>
+
+            <filter id="mastery-glow">
+              <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+              <feMerge> 
+                <feMergeNode in="coloredBlur"/>
+                <feMergeNode in="SourceGraphic"/> 
+              </feMerge>
+            </filter>
+          </defs>
+
+          {/* Code Matrix Background */}
+          <rect className="parallax-bg" width="100%" height="100%" fill="url(#code-matrix)" />
+          
+          {/* Tech Stack Layers */}
+          <g className="parallax-circuit1">
+            <path d="M 0,480 Q 250,320 500,380 Q 750,440 1000,360 Q 1100,340 1200,360 L 1200,800 L 0,800 Z" 
+                  fill="rgba(6, 95, 70, 0.4)" stroke="rgba(16, 185, 129, 0.6)" strokeWidth="2" />
+            {/* Tech Stack Nodes */}
+            <circle cx="180" cy="400" r="8" fill="rgba(16, 185, 129, 0.9)" className="floating-hex" filter="url(#mastery-glow)" />
+            <circle cx="380" cy="350" r="10" fill="rgba(52, 211, 153, 0.9)" className="floating-hex" filter="url(#mastery-glow)" />
+            <circle cx="580" cy="390" r="9" fill="rgba(16, 185, 129, 0.9)" className="floating-hex" filter="url(#mastery-glow)" />
+            <circle cx="780" cy="340" r="8" fill="rgba(52, 211, 153, 0.9)" className="floating-hex" filter="url(#mastery-glow)" />
+            <circle cx="980" cy="370" r="7" fill="rgba(16, 185, 129, 0.9)" className="floating-hex" filter="url(#mastery-glow)" />
+          </g>
+
+          {/* Advanced Skills Layer */}
+          <g className="parallax-circuit2">
+            <path d="M 0,620 Q 300,480 600,540 Q 900,600 1200,520 L 1200,800 L 0,800 Z" 
+                  fill="rgba(4, 120, 87, 0.3)" stroke="rgba(52, 211, 153, 0.5)" strokeWidth="2" />
+            <circle cx="300" cy="520" r="6" fill="rgba(52, 211, 153, 0.8)" className="floating-hex" filter="url(#mastery-glow)" />
+            <circle cx="700" cy="500" r="7" fill="rgba(16, 185, 129, 0.8)" className="floating-hex" filter="url(#mastery-glow)" />
+            <circle cx="900" cy="540" r="5" fill="rgba(52, 211, 153, 0.8)" className="floating-hex" filter="url(#mastery-glow)" />
+          </g>
+
+          {/* Code Execution Streams */}
+          <g className="parallax-data-flow">
+            <path className="data-stream" 
+                  d="M 80,280 Q 280,230 480,280 T 880,260 Q 1020,240 1120,280" 
+                  stroke="url(#mastery-gradient)" 
+                  strokeWidth="5" 
+                  fill="none" 
+                  strokeDasharray="30 18" 
+                  filter="url(#mastery-glow)" />
+            <path className="data-stream" 
+                  d="M 120,420 Q 320,370 520,420 T 920,400 Q 1080,380 1150,420" 
+                  stroke="url(#mastery-gradient)" 
+                  strokeWidth="4" 
+                  fill="none" 
+                  strokeDasharray="25 15" 
+                  filter="url(#mastery-glow)" />
+          </g>
+
+          {/* Advanced Programming Code */}
+          <g className="parallax-code">
+            <text x="160" y="320" fill="rgba(16, 185, 129, 0.9)" fontSize="14" fontFamily="monospace" className="floating-binary">
+              {'class MLPipeline:'}
+            </text>
+            <text x="680" y="300" fill="rgba(52, 211, 153, 0.9)" fontSize="13" fontFamily="monospace" className="floating-binary">
+              {'async def optimize()'}
+            </text>
+            <text x="220" y="520" fill="rgba(16, 185, 129, 0.8)" fontSize="12" fontFamily="monospace" className="floating-binary">
+              {'Docker • K8s • AWS'}
+            </text>
+            <text x="750" y="480" fill="rgba(52, 211, 153, 0.8)" fontSize="13" fontFamily="monospace" className="floating-binary">
+              {'React • TypeScript'}
+            </text>
+            <text x="420" y="350" fill="rgba(16, 185, 129, 0.7)" fontSize="11" fontFamily="monospace" className="floating-binary">
+              {'PostgreSQL • Redis'}
+            </text>
+          </g>
+
+          {/* Technical Architecture Connections */}
+          <g className="parallax-nodes">
+            <circle cx="220" cy="220" r="5" fill="rgba(16, 185, 129, 0.9)" filter="url(#mastery-glow)" className="floating-hex" />
+            <circle cx="420" cy="200" r="6" fill="rgba(52, 211, 153, 0.9)" filter="url(#mastery-glow)" className="floating-hex" />
+            <circle cx="620" cy="240" r="5" fill="rgba(16, 185, 129, 0.9)" filter="url(#mastery-glow)" className="floating-hex" />
+            <circle cx="820" cy="210" r="7" fill="rgba(52, 211, 153, 0.9)" filter="url(#mastery-glow)" className="floating-hex" />
+            <circle cx="1020" cy="230" r="5" fill="rgba(16, 185, 129, 0.9)" filter="url(#mastery-glow)" className="floating-hex" />
+            
+            {/* Architecture Links */}
+            <line x1="220" y1="220" x2="420" y2="200" stroke="rgba(16, 185, 129, 0.6)" strokeWidth="2" />
+            <line x1="420" y1="200" x2="620" y2="240" stroke="rgba(52, 211, 153, 0.6)" strokeWidth="2" />
+            <line x1="620" y1="240" x2="820" y2="210" stroke="rgba(16, 185, 129, 0.6)" strokeWidth="2" />
+            <line x1="820" y1="210" x2="1020" y2="230" stroke="rgba(52, 211, 153, 0.6)" strokeWidth="2" />
+          </g>
+
+          {/* Floating Tech Icons */}
+          <g className="parallax-nodes">
+            <rect x="140" y="360" width="16" height="16" rx="3" fill="rgba(16, 185, 129, 0.8)" className="floating-hex" />
+            <polygon points="480,340 490,320 500,340 490,360" fill="rgba(52, 211, 153, 0.8)" className="floating-hex" />
+            <circle cx="840" cy="350" r="8" fill="rgba(16, 185, 129, 0.7)" className="floating-hex" />
+            <rect x="1080" y="370" width="14" height="14" rx="2" fill="rgba(52, 211, 153, 0.7)" className="floating-hex" />
+            <polygon points="320,380 335,365 350,380 335,395" fill="rgba(16, 185, 129, 0.6)" className="floating-hex" />
+          </g>
+
+          {/* Central Focus Text */}
+          <g className="relative z-10">
+            <text x="600" y="400" textAnchor="middle" fill="rgba(255, 255, 255, 0.95)" 
+                  fontSize="46" fontWeight="bold" fontFamily="Inter, sans-serif" filter="url(#mastery-glow)">
+              {'MASTERY'}
+            </text>
+            <text x="600" y="450" textAnchor="middle" fill="rgba(52, 211, 153, 0.9)" 
+                  fontSize="22" fontFamily="Inter, sans-serif">
+              {'Through Practice'}
+            </text>
+          </g>
+        </svg>
+
+        {/* Scroll Indicator */}
+        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 text-center">
+          <div className="animate-bounce-slow opacity-60">
+            <ChevronDown className="text-emerald-400 animate-pulse" size={32} />
           </div>
         </div>
       </section>
@@ -1261,6 +2680,225 @@ ADDITIONAL INFORMATION:
         </div>
       </section>
 
+      {/* Creation Code Parallax Section */}
+      <section ref={creationParallaxRef} className="relative h-screen overflow-hidden">
+        {/* Dynamic Creative Workspace Background */}
+        <div className="absolute inset-0">
+          {/* Design Studio Base */}
+          <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-rose-950 to-gray-900" />
+          
+          {/* Design Canvas */}
+          <div className="absolute top-8 left-8 w-2/3 h-3/4 bg-white rounded-lg shadow-2xl border-4 border-gray-700 overflow-hidden">
+            {/* Canvas Header */}
+            <div className="h-10 bg-gray-100 border-b border-gray-300 flex items-center px-4">
+              <div className="flex space-x-1">
+                <div className="w-3 h-3 bg-red-400 rounded-full" />
+                <div className="w-3 h-3 bg-yellow-400 rounded-full" />
+                <div className="w-3 h-3 bg-green-400 rounded-full" />
+              </div>
+              <span className="ml-4 text-sm text-gray-600">Portfolio Design - Figma</span>
+            </div>
+            
+            {/* Design Elements */}
+            <div className="relative p-4 h-full bg-gray-50">
+              {/* UI Components */}
+              <div className="absolute top-8 left-8 w-32 h-20 bg-gradient-to-r from-pink-400 to-purple-500 rounded-lg opacity-80" />
+              <div className="absolute top-8 right-8 w-24 h-16 bg-gradient-to-r from-blue-400 to-teal-500 rounded opacity-70" />
+              <div className="absolute bottom-1/3 left-1/4 w-40 h-6 bg-gray-300 rounded opacity-60" />
+              <div className="absolute bottom-1/4 left-1/4 w-32 h-4 bg-gray-200 rounded opacity-50" />
+              
+              {/* Design Grid */}
+              <div className="absolute inset-4 opacity-20" style={{
+                backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 19px, rgba(236, 72, 153, 0.3) 20px), repeating-linear-gradient(90deg, transparent, transparent 19px, rgba(236, 72, 153, 0.3) 20px)',
+                backgroundSize: '20px 20px'
+              }} />
+            </div>
+          </div>
+          
+          {/* Design Tools Panel */}
+          <div className="absolute top-8 right-8 w-16 h-80 bg-gray-800 rounded border border-pink-500 opacity-90">
+            <div className="p-2 space-y-2">
+              <div className="w-12 h-12 bg-pink-500 rounded flex items-center justify-center text-white text-xl font-bold">✏</div>
+              <div className="w-12 h-12 bg-purple-500 rounded flex items-center justify-center text-white text-xl">🎨</div>
+              <div className="w-12 h-12 bg-blue-500 rounded flex items-center justify-center text-white text-xl">📐</div>
+              <div className="w-12 h-12 bg-teal-500 rounded flex items-center justify-center text-white text-xl">⚙️</div>
+            </div>
+          </div>
+          
+          {/* Code Preview Window */}
+          <div className="absolute bottom-8 left-8 w-1/2 h-40 bg-gray-900 rounded border border-pink-400 opacity-85">
+            <div className="h-8 bg-gray-800 flex items-center px-3 text-sm text-pink-400 border-b border-pink-400">
+              component.tsx
+            </div>
+            <div className="p-3 text-xs font-mono">
+              <div className="text-purple-400">const</div>
+              <div className="ml-2 text-pink-400">{'Portfolio = () => {'}</div>
+              <div className="ml-4 text-blue-400">return (</div>
+              <div className="ml-6 text-green-400">{'<div className="hero">'}</div>
+              <div className="ml-8 text-yellow-400">{'<h1>Innovation</h1>'}</div>
+              <div className="ml-6 text-green-400">{'</div>'}</div>
+              <div className="ml-4 text-blue-400">)</div>
+              <div className="ml-2 text-pink-400">{'}'}</div>
+            </div>
+          </div>
+          
+          {/* Build Process Indicators */}
+          <div className="absolute bottom-8 right-8 w-48 h-32 bg-black rounded border border-pink-500 opacity-80">
+            <div className="h-6 bg-gray-900 flex items-center px-2 text-xs text-pink-400 border-b border-pink-500">
+              Build Process
+            </div>
+            <div className="p-2 text-xs font-mono text-green-400">
+              <div className="flex items-center"><div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-ping" />Compiling...</div>
+              <div className="flex items-center"><div className="w-2 h-2 bg-yellow-400 rounded-full mr-2 animate-pulse" />Bundling assets</div>
+              <div className="flex items-center"><div className="w-2 h-2 bg-blue-400 rounded-full mr-2" />Optimizing</div>
+              <div className="text-pink-400 animate-pulse">🚀 Ready to deploy!</div>
+            </div>
+          </div>
+          
+          {/* Creative Particles */}
+          <div className="absolute top-1/4 left-1/4 w-4 h-4 bg-pink-400 rotate-45 animate-ping opacity-60" />
+          <div className="absolute top-1/3 right-1/3 w-3 h-3 bg-purple-400 rounded-full animate-ping opacity-60" style={{ animationDelay: '1s' }} />
+          <div className="absolute bottom-1/3 left-2/5 w-5 h-2 bg-pink-400 animate-ping opacity-60" style={{ animationDelay: '2s' }} />
+          <div className="absolute bottom-1/4 right-1/4 w-3 h-3 bg-purple-400 rotate-45 animate-ping opacity-60" style={{ animationDelay: '3s' }} />
+        </div>
+        <svg 
+          viewBox="0 0 1200 800" 
+          className="absolute inset-0 w-full h-full"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <defs>
+            <pattern id="build-grid" patternUnits="userSpaceOnUse" width="100" height="100">
+              <rect width="100" height="100" fill="rgba(236, 72, 153, 0.04)" />
+              <path d="M 0,50 L 100,50 M 50,0 L 50,100" stroke="rgba(236, 72, 153, 0.15)" strokeWidth="1" />
+              <circle cx="25" cy="25" r="1.5" fill="rgba(236, 72, 153, 0.3)" />
+              <circle cx="75" cy="75" r="1.5" fill="rgba(219, 39, 119, 0.3)" />
+            </pattern>
+            
+            <linearGradient id="creation-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="rgba(236, 72, 153, 0)" />
+              <stop offset="50%" stopColor="rgba(236, 72, 153, 0.9)" />
+              <stop offset="100%" stopColor="rgba(219, 39, 119, 0)" />
+            </linearGradient>
+
+            <filter id="creation-glow">
+              <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+              <feMerge> 
+                <feMergeNode in="coloredBlur"/>
+                <feMergeNode in="SourceGraphic"/> 
+              </feMerge>
+            </filter>
+          </defs>
+
+          {/* Build Grid Background */}
+          <rect className="parallax-bg" width="100%" height="100%" fill="url(#build-grid)" />
+          
+          {/* Creative Architecture Layers */}
+          <g className="parallax-circuit1">
+            <path d="M 0,450 Q 200,280 400,350 Q 600,420 800,320 Q 1000,220 1200,300 L 1200,800 L 0,800 Z" 
+                  fill="rgba(157, 23, 77, 0.4)" stroke="rgba(236, 72, 153, 0.6)" strokeWidth="2" />
+            {/* Creative Nodes */}
+            <circle cx="200" cy="370" r="9" fill="rgba(236, 72, 153, 0.9)" className="floating-hex" filter="url(#creation-glow)" />
+            <circle cx="400" cy="340" r="11" fill="rgba(219, 39, 119, 0.9)" className="floating-hex" filter="url(#creation-glow)" />
+            <circle cx="600" cy="380" r="10" fill="rgba(236, 72, 153, 0.9)" className="floating-hex" filter="url(#creation-glow)" />
+            <circle cx="800" cy="310" r="9" fill="rgba(219, 39, 119, 0.9)" className="floating-hex" filter="url(#creation-glow)" />
+            <circle cx="1000" cy="330" r="8" fill="rgba(236, 72, 153, 0.9)" className="floating-hex" filter="url(#creation-glow)" />
+          </g>
+
+          {/* Innovation Build Layer */}
+          <g className="parallax-circuit2">
+            <path d="M 0,600 Q 250,460 500,520 Q 750,580 1000,480 Q 1100,440 1200,460 L 1200,800 L 0,800 Z" 
+                  fill="rgba(190, 24, 93, 0.3)" stroke="rgba(219, 39, 119, 0.5)" strokeWidth="2" />
+            <circle cx="280" cy="500" r="7" fill="rgba(219, 39, 119, 0.8)" className="floating-hex" filter="url(#creation-glow)" />
+            <circle cx="650" cy="480" r="8" fill="rgba(236, 72, 153, 0.8)" className="floating-hex" filter="url(#creation-glow)" />
+            <circle cx="950" cy="520" r="6" fill="rgba(219, 39, 119, 0.8)" className="floating-hex" filter="url(#creation-glow)" />
+          </g>
+
+          {/* Development Flow Streams */}
+          <g className="parallax-data-flow">
+            <path className="data-stream" 
+                  d="M 60,260 Q 260,210 460,260 T 860,240 Q 1000,220 1140,260" 
+                  stroke="url(#creation-gradient)" 
+                  strokeWidth="6" 
+                  fill="none" 
+                  strokeDasharray="35 20" 
+                  filter="url(#creation-glow)" />
+            <path className="data-stream" 
+                  d="M 100,400 Q 300,350 500,400 T 900,380 Q 1050,360 1180,400" 
+                  stroke="url(#creation-gradient)" 
+                  strokeWidth="5" 
+                  fill="none" 
+                  strokeDasharray="28 16" 
+                  filter="url(#creation-glow)" />
+          </g>
+
+          {/* Creative Development Code */}
+          <g className="parallax-code">
+            <text x="140" y="310" fill="rgba(236, 72, 153, 0.9)" fontSize="15" fontFamily="monospace" className="floating-binary">
+              {'const build = () => {'}
+            </text>
+            <text x="660" y="290" fill="rgba(219, 39, 119, 0.9)" fontSize="14" fontFamily="monospace" className="floating-binary">
+              {'return innovation;'}
+            </text>
+            <text x="200" y="500" fill="rgba(236, 72, 153, 0.8)" fontSize="13" fontFamily="monospace" className="floating-binary">
+              {'UI/UX • Design'}
+            </text>
+            <text x="720" y="460" fill="rgba(219, 39, 119, 0.8)" fontSize="14" fontFamily="monospace" className="floating-binary">
+              {'deploy().success()'}
+            </text>
+            <text x="380" y="340" fill="rgba(236, 72, 153, 0.7)" fontSize="12" fontFamily="monospace" className="floating-binary">
+              {'git commit -m "magic"'}
+            </text>
+            <text x="850" y="380" fill="rgba(219, 39, 119, 0.7)" fontSize="13" fontFamily="monospace" className="floating-binary">
+              {'npm run build'}
+            </text>
+          </g>
+
+          {/* Project Architecture Connections */}
+          <g className="parallax-nodes">
+            <circle cx="180" cy="200" r="6" fill="rgba(236, 72, 153, 0.9)" filter="url(#creation-glow)" className="floating-hex" />
+            <circle cx="380" cy="180" r="7" fill="rgba(219, 39, 119, 0.9)" filter="url(#creation-glow)" className="floating-hex" />
+            <circle cx="580" cy="220" r="6" fill="rgba(236, 72, 153, 0.9)" filter="url(#creation-glow)" className="floating-hex" />
+            <circle cx="780" cy="190" r="8" fill="rgba(219, 39, 119, 0.9)" filter="url(#creation-glow)" className="floating-hex" />
+            <circle cx="980" cy="210" r="6" fill="rgba(236, 72, 153, 0.9)" filter="url(#creation-glow)" className="floating-hex" />
+            
+            {/* Creative Links */}
+            <line x1="180" y1="200" x2="380" y2="180" stroke="rgba(236, 72, 153, 0.6)" strokeWidth="2" />
+            <line x1="380" y1="180" x2="580" y2="220" stroke="rgba(219, 39, 119, 0.6)" strokeWidth="2" />
+            <line x1="580" y1="220" x2="780" y2="190" stroke="rgba(236, 72, 153, 0.6)" strokeWidth="2" />
+            <line x1="780" y1="190" x2="980" y2="210" stroke="rgba(219, 39, 119, 0.6)" strokeWidth="2" />
+          </g>
+
+          {/* Floating Creative Elements */}
+          <g className="parallax-nodes">
+            <rect x="120" y="350" width="18" height="18" rx="4" fill="rgba(236, 72, 153, 0.8)" className="floating-hex" />
+            <polygon points="460,330 475,310 490,330 475,350" fill="rgba(219, 39, 119, 0.8)" className="floating-hex" />
+            <circle cx="820" cy="340" r="9" fill="rgba(236, 72, 153, 0.7)" className="floating-hex" />
+            <rect x="1060" y="360" width="16" height="16" rx="3" fill="rgba(219, 39, 119, 0.7)" className="floating-hex" />
+            <polygon points="300,370 318,352 336,370 318,388" fill="rgba(236, 72, 153, 0.6)" className="floating-hex" />
+            <circle cx="700" cy="380" r="7" fill="rgba(219, 39, 119, 0.6)" className="floating-hex" />
+          </g>
+
+          {/* Central Focus Text */}
+          <g className="relative z-10">
+            <text x="600" y="400" textAnchor="middle" fill="rgba(255, 255, 255, 0.95)" 
+                  fontSize="46" fontWeight="bold" fontFamily="Inter, sans-serif" filter="url(#creation-glow)">
+              {'CREATION'}
+            </text>
+            <text x="600" y="450" textAnchor="middle" fill="rgba(219, 39, 119, 0.9)" 
+                  fontSize="22" fontFamily="Inter, sans-serif">
+              {'Through Code'}
+            </text>
+          </g>
+        </svg>
+
+        {/* Scroll Indicator */}
+        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 text-center">
+          <div className="animate-bounce-slow opacity-60">
+            <ChevronDown className="text-pink-400 animate-pulse" size={32} />
+          </div>
+        </div>
+      </section>
+
       {/* Projects Section */}
       <section id="projects" className="py-20 bg-gray-800/50 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -1288,6 +2926,214 @@ ADDITIONAL INFORMATION:
               onClose={() => setOpenProject(null)}
             />
           )}
+        </div>
+      </section>
+
+      {/* Collaboration Connection Parallax Section */}
+      <section ref={collaborationParallaxRef} className="relative h-screen overflow-hidden">
+        {/* Dynamic Global Network Background */}
+        <div className="absolute inset-0">
+          {/* Global Network Base */}
+          <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900" />
+          
+          {/* World Map Outline */}
+          <div className="absolute inset-0 opacity-20" style={{
+            backgroundImage: `
+              radial-gradient(circle at 20% 30%, rgba(34, 211, 238, 0.3) 0%, transparent 25%),
+              radial-gradient(circle at 80% 40%, rgba(6, 182, 212, 0.3) 0%, transparent 25%),
+              radial-gradient(circle at 60% 70%, rgba(34, 211, 238, 0.25) 0%, transparent 20%),
+              radial-gradient(circle at 30% 80%, rgba(6, 182, 212, 0.25) 0%, transparent 20%),
+              radial-gradient(circle at 70% 20%, rgba(34, 211, 238, 0.2) 0%, transparent 15%)
+            `,
+            backgroundSize: '400px 400px, 350px 350px, 300px 300px, 380px 380px, 280px 280px'
+          }} />
+          
+          {/* Communication Signals */}
+          <div className="absolute inset-0">
+            {/* Signal transmission lines */}
+            <div className="absolute top-1/4 left-1/6 w-2/3 h-px bg-gradient-to-r from-cyan-400 via-transparent to-teal-400 animate-pulse opacity-70" />
+            <div className="absolute top-2/5 right-1/6 w-1/2 h-px bg-gradient-to-l from-cyan-400 via-transparent to-blue-400 animate-pulse opacity-70" style={{ animationDelay: '1s' }} />
+            <div className="absolute bottom-2/5 left-1/4 w-3/5 h-px bg-gradient-to-r from-teal-400 via-transparent to-cyan-400 animate-pulse opacity-70" style={{ animationDelay: '2s' }} />
+            <div className="absolute bottom-1/4 right-1/4 w-1/3 h-px bg-gradient-to-l from-blue-400 via-transparent to-cyan-400 animate-pulse opacity-70" style={{ animationDelay: '3s' }} />
+            
+            {/* Vertical connections */}
+            <div className="absolute top-1/6 left-1/4 w-px h-2/3 bg-gradient-to-b from-cyan-400 via-transparent to-teal-400 animate-pulse opacity-60" style={{ animationDelay: '0.5s' }} />
+            <div className="absolute top-1/5 right-1/3 w-px h-1/2 bg-gradient-to-b from-blue-400 via-transparent to-cyan-400 animate-pulse opacity-60" style={{ animationDelay: '2.5s' }} />
+          </div>
+          
+          {/* Global Connection Hubs */}
+          <div className="absolute top-1/4 left-1/5 w-6 h-6 border-2 border-cyan-400 rounded-full bg-cyan-400/20 animate-ping" />
+          <div className="absolute top-1/3 right-1/4 w-5 h-5 border-2 border-teal-400 rounded-full bg-teal-400/20 animate-ping" style={{ animationDelay: '1s' }} />
+          <div className="absolute bottom-1/3 left-2/5 w-7 h-7 border-2 border-cyan-400 rounded-full bg-cyan-400/20 animate-ping" style={{ animationDelay: '2s' }} />
+          <div className="absolute bottom-1/4 right-1/5 w-5 h-5 border-2 border-blue-400 rounded-full bg-blue-400/20 animate-ping" style={{ animationDelay: '3s' }} />
+          <div className="absolute top-1/2 left-1/2 w-4 h-4 border-2 border-teal-400 rounded-full bg-teal-400/20 animate-ping" style={{ animationDelay: '1.5s' }} />
+          
+          {/* Satellite Network */}
+          <div className="absolute top-1/6 right-1/6 w-3 h-3 bg-cyan-400 rounded-full animate-pulse opacity-80" />
+          <div className="absolute top-1/5 left-1/3 w-2.5 h-2.5 bg-teal-400 rounded-full animate-pulse opacity-80" style={{ animationDelay: '1s' }} />
+          <div className="absolute bottom-1/6 right-1/3 w-3 h-3 bg-blue-400 rounded-full animate-pulse opacity-80" style={{ animationDelay: '2s' }} />
+          <div className="absolute bottom-1/5 left-1/6 w-2.5 h-2.5 bg-cyan-400 rounded-full animate-pulse opacity-80" style={{ animationDelay: '3s' }} />
+          
+          {/* Data Transmission Waves */}
+          <div className="absolute inset-0 opacity-25">
+            <div className="absolute top-1/8 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-cyan-400 to-transparent animate-pulse" />
+            <div className="absolute top-1/4 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-teal-400 to-transparent animate-pulse" style={{ animationDelay: '2s' }} />
+            <div className="absolute bottom-1/4 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-blue-400 to-transparent animate-pulse" style={{ animationDelay: '4s' }} />
+            <div className="absolute bottom-1/8 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-cyan-400 to-transparent animate-pulse" style={{ animationDelay: '6s' }} />
+          </div>
+          
+          {/* Communication Icons */}
+          <div className="absolute top-1/3 left-1/6 text-cyan-400 text-2xl animate-ping opacity-60" style={{ animationDelay: '1s' }}>📡</div>
+          <div className="absolute top-2/5 right-1/5 text-teal-400 text-xl animate-ping opacity-60" style={{ animationDelay: '3s' }}>🌐</div>
+          <div className="absolute bottom-2/5 left-1/3 text-blue-400 text-2xl animate-ping opacity-60" style={{ animationDelay: '2s' }}>💬</div>
+          <div className="absolute bottom-1/3 right-2/5 text-cyan-400 text-xl animate-ping opacity-60" style={{ animationDelay: '4s' }}>🔗</div>
+        </div>
+        <svg 
+          viewBox="0 0 1200 800" 
+          className="absolute inset-0 w-full h-full"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <defs>
+            <pattern id="network-mesh" patternUnits="userSpaceOnUse" width="150" height="150">
+              <rect width="150" height="150" fill="rgba(34, 211, 238, 0.02)" />
+              <circle cx="75" cy="75" r="2" fill="rgba(34, 211, 238, 0.4)" />
+              <path d="M 0,75 L 150,75 M 75,0 L 75,150" stroke="rgba(34, 211, 238, 0.1)" strokeWidth="1" strokeDasharray="5 5" />
+              <circle cx="25" cy="25" r="1" fill="rgba(6, 182, 212, 0.3)" />
+              <circle cx="125" cy="125" r="1" fill="rgba(34, 211, 238, 0.3)" />
+            </pattern>
+            
+            <linearGradient id="connection-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="rgba(34, 211, 238, 0)" />
+              <stop offset="50%" stopColor="rgba(34, 211, 238, 0.9)" />
+              <stop offset="100%" stopColor="rgba(6, 182, 212, 0)" />
+            </linearGradient>
+
+            <filter id="connection-glow">
+              <feGaussianBlur stdDeviation="5" result="coloredBlur"/>
+              <feMerge> 
+                <feMergeNode in="coloredBlur"/>
+                <feMergeNode in="SourceGraphic"/> 
+              </feMerge>
+            </filter>
+          </defs>
+
+          {/* Network Mesh Background */}
+          <rect className="parallax-bg" width="100%" height="100%" fill="url(#network-mesh)" />
+          
+          {/* Global Network Layers */}
+          <g className="parallax-circuit1">
+            <path d="M 0,420 Q 150,250 300,320 Q 450,390 600,280 Q 750,170 900,240 Q 1050,310 1200,220 L 1200,800 L 0,800 Z" 
+                  fill="rgba(21, 94, 117, 0.4)" stroke="rgba(34, 211, 238, 0.6)" strokeWidth="2" />
+            {/* Global Connection Nodes */}
+            <circle cx="150" cy="340" r="10" fill="rgba(34, 211, 238, 0.9)" className="floating-hex" filter="url(#connection-glow)" />
+            <circle cx="350" cy="300" r="12" fill="rgba(6, 182, 212, 0.9)" className="floating-hex" filter="url(#connection-glow)" />
+            <circle cx="550" cy="360" r="11" fill="rgba(34, 211, 238, 0.9)" className="floating-hex" filter="url(#connection-glow)" />
+            <circle cx="750" cy="280" r="10" fill="rgba(6, 182, 212, 0.9)" className="floating-hex" filter="url(#connection-glow)" />
+            <circle cx="950" cy="320" r="9" fill="rgba(34, 211, 238, 0.9)" className="floating-hex" filter="url(#connection-glow)" />
+          </g>
+
+          {/* Future Collaboration Layer */}
+          <g className="parallax-circuit2">
+            <path d="M 0,580 Q 200,440 400,500 Q 600,560 800,460 Q 1000,360 1200,420 L 1200,800 L 0,800 Z" 
+                  fill="rgba(8, 145, 178, 0.3)" stroke="rgba(6, 182, 212, 0.5)" strokeWidth="2" />
+            <circle cx="250" cy="480" r="8" fill="rgba(6, 182, 212, 0.8)" className="floating-hex" filter="url(#connection-glow)" />
+            <circle cx="600" cy="440" r="9" fill="rgba(34, 211, 238, 0.8)" className="floating-hex" filter="url(#connection-glow)" />
+            <circle cx="900" cy="500" r="7" fill="rgba(6, 182, 212, 0.8)" className="floating-hex" filter="url(#connection-glow)" />
+          </g>
+
+          {/* Communication Flow Streams */}
+          <g className="parallax-data-flow">
+            <path className="data-stream" 
+                  d="M 40,240 Q 240,190 440,240 T 840,220 Q 980,200 1160,240" 
+                  stroke="url(#connection-gradient)" 
+                  strokeWidth="7" 
+                  fill="none" 
+                  strokeDasharray="40 22" 
+                  filter="url(#connection-glow)" />
+            <path className="data-stream" 
+                  d="M 80,380 Q 280,330 480,380 T 880,360 Q 1040,340 1180,380" 
+                  stroke="url(#connection-gradient)" 
+                  strokeWidth="6" 
+                  fill="none" 
+                  strokeDasharray="32 18" 
+                  filter="url(#connection-glow)" />
+            <path className="data-stream" 
+                  d="M 120,520 Q 320,470 520,520 T 920,500" 
+                  stroke="url(#connection-gradient)" 
+                  strokeWidth="5" 
+                  fill="none" 
+                  strokeDasharray="28 16" 
+                  filter="url(#connection-glow)" />
+          </g>
+
+          {/* Collaboration Code & Communication */}
+          <g className="parallax-code">
+            <text x="120" y="300" fill="rgba(34, 211, 238, 0.9)" fontSize="16" fontFamily="monospace" className="floating-binary">
+              {'connect().then(success)'}
+            </text>
+            <text x="640" y="280" fill="rgba(6, 182, 212, 0.9)" fontSize="15" fontFamily="monospace" className="floating-binary">
+              {'await collaborate()'}
+            </text>
+            <text x="180" y="480" fill="rgba(34, 211, 238, 0.8)" fontSize="14" fontFamily="monospace" className="floating-binary">
+              {'LinkedIn • GitHub'}
+            </text>
+            <text x="700" y="440" fill="rgba(6, 182, 212, 0.8)" fontSize="15" fontFamily="monospace" className="floating-binary">
+              {'let\'s build together'}
+            </text>
+            <text x="360" y="330" fill="rgba(34, 211, 238, 0.7)" fontSize="13" fontFamily="monospace" className="floating-binary">
+              {'team.add(innovation)'}
+            </text>
+            <text x="830" y="360" fill="rgba(6, 182, 212, 0.7)" fontSize="14" fontFamily="monospace" className="floating-binary">
+              {'future.create()'}
+            </text>
+          </g>
+
+          {/* Global Network Connections */}
+          <g className="parallax-nodes">
+            <circle cx="160" cy="180" r="7" fill="rgba(34, 211, 238, 0.9)" filter="url(#connection-glow)" className="floating-hex" />
+            <circle cx="360" cy="160" r="8" fill="rgba(6, 182, 212, 0.9)" filter="url(#connection-glow)" className="floating-hex" />
+            <circle cx="560" cy="200" r="7" fill="rgba(34, 211, 238, 0.9)" filter="url(#connection-glow)" className="floating-hex" />
+            <circle cx="760" cy="170" r="9" fill="rgba(6, 182, 212, 0.9)" filter="url(#connection-glow)" className="floating-hex" />
+            <circle cx="960" cy="190" r="7" fill="rgba(34, 211, 238, 0.9)" filter="url(#connection-glow)" className="floating-hex" />
+            <circle cx="1060" cy="220" r="6" fill="rgba(6, 182, 212, 0.9)" filter="url(#connection-glow)" className="floating-hex" />
+            
+            {/* Dynamic Network Links */}
+            <line x1="160" y1="180" x2="360" y2="160" stroke="rgba(34, 211, 238, 0.6)" strokeWidth="2" strokeDasharray="8 4" />
+            <line x1="360" y1="160" x2="560" y2="200" stroke="rgba(6, 182, 212, 0.6)" strokeWidth="2" strokeDasharray="8 4" />
+            <line x1="560" y1="200" x2="760" y2="170" stroke="rgba(34, 211, 238, 0.6)" strokeWidth="2" strokeDasharray="8 4" />
+            <line x1="760" y1="170" x2="960" y2="190" stroke="rgba(6, 182, 212, 0.6)" strokeWidth="2" strokeDasharray="8 4" />
+            <line x1="960" y1="190" x2="1060" y2="220" stroke="rgba(34, 211, 238, 0.6)" strokeWidth="2" strokeDasharray="8 4" />
+          </g>
+
+          {/* Floating Collaboration Icons */}
+          <g className="parallax-nodes">
+            <rect x="100" y="340" width="20" height="20" rx="5" fill="rgba(34, 211, 238, 0.8)" className="floating-hex" />
+            <polygon points="440,310 458,288 476,310 458,332" fill="rgba(6, 182, 212, 0.8)" className="floating-hex" />
+            <circle cx="800" cy="320" r="10" fill="rgba(34, 211, 238, 0.7)" className="floating-hex" />
+            <rect x="1040" y="340" width="18" height="18" rx="4" fill="rgba(6, 182, 212, 0.7)" className="floating-hex" />
+            <polygon points="280,350 302,328 324,350 302,372" fill="rgba(34, 211, 238, 0.6)" className="floating-hex" />
+            <circle cx="680" cy="360" r="8" fill="rgba(6, 182, 212, 0.6)" className="floating-hex" />
+            <rect x="520" y="380" width="16" height="16" rx="3" fill="rgba(34, 211, 238, 0.6)" className="floating-hex" />
+          </g>
+
+          {/* Central Focus Text */}
+          <g className="relative z-10">
+            <text x="600" y="400" textAnchor="middle" fill="rgba(255, 255, 255, 0.95)" 
+                  fontSize="44" fontWeight="bold" fontFamily="Inter, sans-serif" filter="url(#connection-glow)">
+              {'COLLABORATION'}
+            </text>
+            <text x="600" y="450" textAnchor="middle" fill="rgba(6, 182, 212, 0.9)" 
+                  fontSize="22" fontFamily="Inter, sans-serif">
+              {'Through Connection'}
+            </text>
+          </g>
+        </svg>
+
+        {/* Scroll Indicator */}
+        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 text-center">
+          <div className="animate-bounce-slow opacity-60">
+            <ChevronDown className="text-cyan-400 animate-pulse" size={32} />
+          </div>
         </div>
       </section>
 
