@@ -71,7 +71,8 @@ function App() {
         company: "Arian Saeed Industrial Group",
         location: "Tehran, Iran",
         period: "May 2024 – Present",
-        description: "Leading development and deployment of advanced ML solutions across business domains, collaborating with teams to optimize performance with state-of-the-art ML algorithms, and mentoring junior engineers."
+        description: "Leading development and deployment of advanced ML solutions across business domains, collaborating with teams to optimize performance with state-of-the-art ML algorithms, and mentoring junior engineers.",
+        logo: "/assets/company-logos/Arian Saeed Industrial Group.jpeg"
       },
       {
         title: "Full Stack Software Engineer",
@@ -92,7 +93,8 @@ function App() {
         company: "Part AI Research Center",
         location: "Tehran, Iran",
         period: "Jun 2021 – Jul 2022",
-        description: "Developed dynamic pricing models for train tickets using ML algorithms, implemented data streaming pipelines with Kafka and PySpark."
+        description: "Developed dynamic pricing models for train tickets using ML algorithms, implemented data streaming pipelines with Kafka and PySpark.",
+        logo: "/assets/company-logos/Part AI Research Center.webp"
       }
     ],
     education: [
@@ -2171,7 +2173,22 @@ ADDITIONAL INFORMATION:
                             {/* Company Hologram */}
                             <div className="absolute inset-0 flex items-center justify-center">
                               <div className="text-center text-white transform group-hover:scale-110 transition-transform duration-500">
-                                <div className="text-4xl mb-3 filter drop-shadow-lg animate-bounce" style={{ animationDuration: '3s' }}>🏢</div>
+                                {item.logo ? (
+                                  <div className="mb-3 filter drop-shadow-lg animate-bounce" style={{ animationDuration: '3s' }}>
+                                    <img 
+                                      src={item.logo} 
+                                      alt={`${item.company} logo`}
+                                      className="w-32 h-32 object-contain mx-auto rounded-lg bg-white/10 p-3 backdrop-blur-sm border border-cyan-400/20"
+                                      onError={(e) => {
+                                        e.currentTarget.style.display = 'none';
+                                        e.currentTarget.nextSibling.style.display = 'block';
+                                      }}
+                                    />
+                                    <div className="text-4xl hidden">🏢</div>
+                                  </div>
+                                ) : (
+                                  <div className="text-4xl mb-3 filter drop-shadow-lg animate-bounce" style={{ animationDuration: '3s' }}>🏢</div>
+                                )}
                                 <div className="text-xl font-bold bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent mb-1">
                                   {item.company}
                                 </div>
