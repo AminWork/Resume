@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.utils import timezone
 from .models import ChatMessage
-from .serializers import ChatRequestSerializer, ChatResponseSerializer, ChatMessageSerializer
+from .serializers import ChatRequestSerializer, ChatResponseSerializer, ChatMessageSerializer, ExperienceAnalysisRequestSerializer, ExperienceAnalysisResponseSerializer
 from .services import ChatbotService
 import uuid
 
@@ -49,3 +49,20 @@ class ChatHistoryView(APIView):
         
         serializer = ChatMessageSerializer(messages, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+class ExperienceAnalysisView(APIView):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.chatbot_service = ChatbotService()
+    
+    def post(self, request):
+        serializer = ExperienceAnalysisRequestSerializer(data=request.data)
+        if serializer.is_valid():
+            experience_data = serializer.validated_data
+            
+            # Analyze the experience using the chatbot service
+            analysis = self.chatbot_service.analyze_experience(experience_data)
+            
+            return Response(analysis, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

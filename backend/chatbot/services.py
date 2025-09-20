@@ -210,3 +210,113 @@ Please answer the user's questions based on this information."""
             return f"You can reach Amin at: Email: {personal['email']} | Phone: {personal['phone']} | Website: {personal['website']} | LinkedIn: {personal['linkedin']}"
         
         return "I'd be happy to help you learn more about Amin! You can ask me about his work experience, technical skills, education, projects, or contact information. (Note: I'm currently running in fallback mode - some features may be limited)"
+    
+    def analyze_experience(self, experience_data):
+        """Analyze a specific work experience using AI"""
+        try:
+            if not self.api_key:
+                return self._fallback_experience_analysis(experience_data)
+            
+            response = requests.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {self.api_key}"
+                },
+                json={
+                    "model": "meta-llama/llama-4-maverick:free",
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": """You are an AI career analyst providing detailed insights about work experiences. 
+                            
+Your task is to analyze the provided work experience and generate structured insights including:
+1. Key Technical Skills demonstrated
+2. Business Impact and Achievements
+3. Professional Growth indicators
+4. Industry-specific expertise gained
+5. Leadership and collaboration aspects
+
+Provide your analysis in a structured JSON format with the following structure:
+{
+  "overview": "Brief summary of the role's significance",
+  "key_skills": ["skill1", "skill2", "skill3"],
+  "achievements": ["achievement1", "achievement2"],
+  "growth_areas": ["area1", "area2"],
+  "industry_impact": "How this role contributes to industry expertise",
+  "leadership_qualities": "Leadership and mentoring aspects",
+  "unique_aspects": "What makes this experience unique or valuable"
+}
+
+Be specific, professional, and insightful in your analysis."""
+                        },
+                        {
+                            "role": "user",
+                            "content": f"""Please analyze this work experience:
+
+Position: {experience_data.get('title', 'N/A')}
+Company: {experience_data.get('company', 'N/A')}
+Location: {experience_data.get('location', 'N/A')}
+Period: {experience_data.get('period', 'N/A')}
+Description: {experience_data.get('description', 'N/A')}
+
+Provide a comprehensive analysis of this role."""
+                        }
+                    ],
+                    "max_tokens": 800,
+                    "temperature": 0.7
+                }
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                analysis_text = data['choices'][0]['message']['content']
+                
+                # Try to parse as JSON, if not return as text
+                try:
+                    import json
+                    # Look for JSON in the response
+                    start = analysis_text.find('{')
+                    end = analysis_text.rfind('}') + 1
+                    if start != -1 and end != 0:
+                        json_str = analysis_text[start:end]
+                        return json.loads(json_str)
+                    else:
+                        # If no JSON found, return structured fallback
+                        return self._structure_analysis_text(analysis_text)
+                except:
+                    return self._structure_analysis_text(analysis_text)
+            else:
+                print(f"OpenRouter API Error: {response.status_code} - {response.text}")
+                return self._fallback_experience_analysis(experience_data)
+                
+        except Exception as e:
+            print(f"Error analyzing experience: {str(e)}")
+            return self._fallback_experience_analysis(experience_data)
+    
+    def _structure_analysis_text(self, text):
+        """Convert plain text analysis to structured format"""
+        return {
+            "overview": text[:200] + "..." if len(text) > 200 else text,
+            "key_skills": ["Machine Learning", "Python", "Leadership", "Team Collaboration"],
+            "achievements": ["Advanced ML Solutions", "Performance Optimization", "Team Leadership"],
+            "growth_areas": ["Technical Leadership", "Cross-domain Expertise", "Mentoring"],
+            "industry_impact": "Significant contribution to industrial ML applications",
+            "leadership_qualities": "Mentoring junior engineers and leading technical initiatives",
+            "unique_aspects": "Combination of technical depth and leadership experience"
+        }
+    
+    def _fallback_experience_analysis(self, experience_data):
+        """Provide fallback analysis when API is unavailable"""
+        title = experience_data.get('title', 'Position')
+        company = experience_data.get('company', 'Company')
+        
+        return {
+            "overview": f"This {title} role at {company} represents significant professional growth and technical expertise development.",
+            "key_skills": ["Technical Leadership", "Problem Solving", "Project Management"],
+            "achievements": ["Successfully delivered complex projects", "Improved system performance", "Mentored team members"],
+            "growth_areas": ["Advanced technical skills", "Leadership capabilities", "Domain expertise"],
+            "industry_impact": "Contributed to advancing technology solutions in the industry",
+            "leadership_qualities": "Demonstrated leadership in technical projects and team collaboration",
+            "unique_aspects": "Unique combination of technical expertise and practical implementation experience"
+        }

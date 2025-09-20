@@ -40,6 +40,9 @@ function App() {
   const [chatButtonPulse, setChatButtonPulse] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [openProject, setOpenProject] = useState<string | null>(null);
+  const [analysisModalOpen, setAnalysisModalOpen] = useState(false);
+  const [currentAnalysis, setCurrentAnalysis] = useState<any>(null);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
   
   const heroRef = useRef<HTMLDivElement>(null);
   const forceGraphRef = useRef<HTMLDivElement>(null);
@@ -852,6 +855,48 @@ ADDITIONAL INFORMATION:
   const handleChatKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       handleChatSubmit();
+    }
+  };
+
+  const analyzeExperience = async (experience: any) => {
+    setAnalysisLoading(true);
+    setAnalysisModalOpen(true);
+    setCurrentAnalysis(null);
+
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/analyze-experience/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title: experience.title,
+          company: experience.company,
+          location: experience.location,
+          period: experience.period,
+          description: experience.description
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.status}`);
+      }
+
+      const analysis = await response.json();
+      setCurrentAnalysis(analysis);
+    } catch (error) {
+      console.error('Experience analysis error:', error);
+      setCurrentAnalysis({
+        overview: "Unable to generate analysis at this time. Please try again later.",
+        key_skills: ["Technical Skills", "Problem Solving", "Leadership"],
+        achievements: ["Project Delivery", "Team Collaboration", "Technical Innovation"],
+        growth_areas: ["Professional Development", "Technical Expertise", "Leadership"],
+        industry_impact: "Significant contribution to technology advancement",
+        leadership_qualities: "Strong leadership and collaboration skills",
+        unique_aspects: "Unique combination of technical and business skills"
+      });
+    } finally {
+      setAnalysisLoading(false);
     }
   };
 
@@ -2187,7 +2232,9 @@ ADDITIONAL INFORMATION:
                           
                           {/* Futuristic Action Button */}
                           <div className="pt-4">
-                            <button className="group/btn relative inline-flex items-center px-8 py-4 bg-gradient-to-r from-cyan-500 to-purple-600 text-white font-bold rounded-2xl overflow-hidden transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-cyan-500/25">
+                            <button 
+                              onClick={() => analyzeExperience(item)}
+                              className="group/btn relative inline-flex items-center px-8 py-4 bg-gradient-to-r from-cyan-500 to-purple-600 text-white font-bold rounded-2xl overflow-hidden transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-cyan-500/25">
                               <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-purple-500 opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300" />
                               <span className="relative z-10 mr-3">ANALYZE EXPERIENCE</span>
                               <div className="relative z-10 w-6 h-6 border-2 border-white/60 rounded-full flex items-center justify-center group-hover/btn:rotate-90 transition-transform duration-300">
@@ -3154,6 +3201,127 @@ ADDITIONAL INFORMATION:
           </p>
         </div>
       </footer>
+
+      {/* Experience Analysis Modal */}
+      {analysisModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="max-w-4xl w-full bg-gray-900 rounded-2xl shadow-2xl relative animate-fade-in overflow-hidden border border-cyan-500/20">
+            <button 
+              onClick={() => setAnalysisModalOpen(false)} 
+              className="absolute top-4 right-4 text-gray-400 hover:text-cyan-400 transition-colors text-2xl z-10"
+            >
+              <X size={28} />
+            </button>
+            
+            <div className="max-h-[90vh] overflow-y-auto p-6 sm:p-8">
+              <div className="text-center mb-8">
+                <h2 className="text-3xl font-bold bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent mb-2">
+                  Experience Analysis
+                </h2>
+                <div className="w-24 h-1 bg-gradient-to-r from-cyan-400 to-purple-400 mx-auto rounded-full"></div>
+              </div>
+
+              {analysisLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="text-center">
+                    <div className="w-16 h-16 border-4 border-cyan-400/30 border-t-cyan-400 rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-gray-400">Analyzing experience with AI...</p>
+                  </div>
+                </div>
+              ) : currentAnalysis ? (
+                <div className="space-y-8">
+                  {/* Overview */}
+                  <div className="bg-gradient-to-r from-slate-800/50 to-slate-700/50 rounded-xl p-6 border border-cyan-400/20">
+                    <h3 className="text-xl font-bold text-cyan-400 mb-4 flex items-center">
+                      <Brain className="mr-2" size={20} />
+                      AI Overview
+                    </h3>
+                    <p className="text-gray-300 leading-relaxed">{currentAnalysis.overview}</p>
+                  </div>
+
+                  {/* Skills Grid */}
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="bg-gradient-to-br from-blue-900/30 to-purple-900/30 rounded-xl p-6 border border-blue-400/20">
+                      <h3 className="text-lg font-bold text-blue-400 mb-4 flex items-center">
+                        <Code className="mr-2" size={18} />
+                        Key Skills
+                      </h3>
+                      <div className="space-y-2">
+                        {currentAnalysis.key_skills?.map((skill: string, index: number) => (
+                          <div key={index} className="flex items-center space-x-2">
+                            <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                            <span className="text-gray-300">{skill}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-green-900/30 to-emerald-900/30 rounded-xl p-6 border border-green-400/20">
+                      <h3 className="text-lg font-bold text-green-400 mb-4 flex items-center">
+                        <Star className="mr-2" size={18} />
+                        Achievements
+                      </h3>
+                      <div className="space-y-2">
+                        {currentAnalysis.achievements?.map((achievement: string, index: number) => (
+                          <div key={index} className="flex items-center space-x-2">
+                            <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                            <span className="text-gray-300">{achievement}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Growth and Impact */}
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="bg-gradient-to-br from-purple-900/30 to-pink-900/30 rounded-xl p-6 border border-purple-400/20">
+                      <h3 className="text-lg font-bold text-purple-400 mb-4 flex items-center">
+                        <Zap className="mr-2" size={18} />
+                        Growth Areas
+                      </h3>
+                      <div className="space-y-2">
+                        {currentAnalysis.growth_areas?.map((area: string, index: number) => (
+                          <div key={index} className="flex items-center space-x-2">
+                            <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
+                            <span className="text-gray-300">{area}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-orange-900/30 to-red-900/30 rounded-xl p-6 border border-orange-400/20">
+                      <h3 className="text-lg font-bold text-orange-400 mb-4 flex items-center">
+                        <Target className="mr-2" size={18} />
+                        Industry Impact
+                      </h3>
+                      <p className="text-gray-300 leading-relaxed">{currentAnalysis.industry_impact}</p>
+                    </div>
+                  </div>
+
+                  {/* Leadership and Unique Aspects */}
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="bg-gradient-to-br from-yellow-900/30 to-amber-900/30 rounded-xl p-6 border border-yellow-400/20">
+                      <h3 className="text-lg font-bold text-yellow-400 mb-4 flex items-center">
+                        <Award className="mr-2" size={18} />
+                        Leadership Qualities
+                      </h3>
+                      <p className="text-gray-300 leading-relaxed">{currentAnalysis.leadership_qualities}</p>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-teal-900/30 to-cyan-900/30 rounded-xl p-6 border border-teal-400/20">
+                      <h3 className="text-lg font-bold text-teal-400 mb-4 flex items-center">
+                        <Rocket className="mr-2" size={18} />
+                        Unique Aspects
+                      </h3>
+                      <p className="text-gray-300 leading-relaxed">{currentAnalysis.unique_aspects}</p>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

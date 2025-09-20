@@ -14,3 +14,19 @@ class ChatRequestSerializer(serializers.Serializer):
 class ChatResponseSerializer(serializers.Serializer):
     response = serializers.CharField()
     timestamp = serializers.DateTimeField()
+
+class ExperienceAnalysisRequestSerializer(serializers.Serializer):
+    title = serializers.CharField(max_length=200)
+    company = serializers.CharField(max_length=200)
+    location = serializers.CharField(max_length=200)
+    period = serializers.CharField(max_length=100)
+    description = serializers.CharField()
+
+class ExperienceAnalysisResponseSerializer(serializers.Serializer):
+    overview = serializers.CharField()
+    key_skills = serializers.ListField(child=serializers.CharField())
+    achievements = serializers.ListField(child=serializers.CharField())
+    growth_areas = serializers.ListField(child=serializers.CharField())
+    industry_impact = serializers.CharField()
+    leadership_qualities = serializers.CharField()
+    unique_aspects = serializers.CharField()
