@@ -605,99 +605,43 @@ ADDITIONAL INFORMATION:
   const [currentKeyIndex, setCurrentKeyIndex] = useState(0);
   const [failedKeys, setFailedKeys] = useState<Set<number>>(new Set());
 
-  const callOpenRouterAPI = async (message: string): Promise<string> => {
-    // Check if we have valid API keys
-    if (apiKeys.length === 0 || apiKeys[0] === 'YOUR_OPENROUTER_API_KEY_1') {
-      throw new Error('Please add your OpenRouter API keys to the code. Get them from https://openrouter.ai/keys');
-    }
+  const callDjangoChatAPI = async (message: string): Promise<string> => {
+    console.log('Calling Django API with message:', message);
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/chat/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message: message,
+          session_id: sessionStorage.getItem('chat_session_id') || undefined
+        })
+      });
 
-    // Find next available API key
-    let keyIndex = currentKeyIndex;
-    let attempts = 0;
-    const maxAttempts = apiKeys.length;
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers);
 
-    while (attempts < maxAttempts) {
-      // Skip failed keys
-      if (failedKeys.has(keyIndex)) {
-        keyIndex = (keyIndex + 1) % apiKeys.length;
-        attempts++;
-        continue;
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error(`Django API Error (${response.status}):`, errorData);
+        throw new Error(`API request failed: ${response.status} - ${errorData}`);
       }
 
-      const apiKey = apiKeys[keyIndex];
+      const data = await response.json();
+      console.log('Response data:', data);
       
-      try {
-        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${apiKey}`,
-            "HTTP-Referer": window.location.origin, // Site URL for rankings
-            "X-Title": "Amin Najafgholizadeh Portfolio", // Site title for rankings
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            "model": "qwen/qwen3-235b-a22b-07-25:free",
-            "messages": [
-              {
-                "role": "system",
-                "content": `You are a professional assistant representing Amin Najafgholizadeh. Answer questions about him based on this CV information: ${cvSummary}. Be conversational, helpful, and accurate. Keep responses concise but informative.`
-              },
-              {
-                "role": "user",
-                "content": message
-              }
-            ],
-            "max_tokens": 500,
-            "temperature": 0.7
-          })
-        });
-
-        if (response.status === 401) {
-          // Authentication failed - mark this key as failed and try next
-          console.log(`API key ${keyIndex + 1} failed with 401 Unauthorized. Trying next key...`);
-          setFailedKeys(prev => new Set([...prev, keyIndex]));
-          keyIndex = (keyIndex + 1) % apiKeys.length;
-          attempts++;
-          continue;
-        }
-
-        if (response.status === 402) {
-          // Payment required - mark this key as failed and try next
-          console.log(`API key ${keyIndex + 1} failed with 402 Payment Required. Trying next key...`);
-          setFailedKeys(prev => new Set([...prev, keyIndex]));
-          keyIndex = (keyIndex + 1) % apiKeys.length;
-          attempts++;
-          continue;
-        }
-
-        if (!response.ok) {
-          const errorData = await response.text();
-          console.error(`API Error (${response.status}):`, errorData);
-          throw new Error(`API request failed: ${response.status} - ${errorData}`);
-        }
-
-        const data = await response.json();
-        
-        // Success! Update current key index for next time
-        setCurrentKeyIndex(keyIndex);
-        
-        return data.choices[0]?.message?.content || 'Sorry, I could not generate a response.';
-        
-      } catch (error) {
-        console.error(`Error with API key ${keyIndex + 1}:`, error);
-        
-        // If it's a 401 or 402 error, mark key as failed
-        if (error instanceof Error && (error.message.includes('401') || error.message.includes('402'))) {
-          setFailedKeys(prev => new Set([...prev, keyIndex]));
-        }
-        
-        keyIndex = (keyIndex + 1) % apiKeys.length;
-        attempts++;
+      // Store session ID for future requests
+      if (data.session_id) {
+        sessionStorage.setItem('chat_session_id', data.session_id);
       }
+      
+      return data.response || 'Sorry, I could not generate a response.';
+        
+    } catch (error) {
+      console.error('Django API Error:', error);
+      throw error;
     }
-
-    // All keys failed
-    throw new Error('All API keys have been exhausted or failed. Please check your OpenRouter API keys at https://openrouter.ai/keys');
   };
 
   // Reset failed keys periodically (every hour) in case credits are refilled
@@ -715,7 +659,7 @@ ADDITIONAL INFORMATION:
   const callOpenRouterAPILegacy = async (message: string) => {
     
     try {
-      return await callOpenRouterAPI(message);
+      return await callDjangoChatAPI(message);
     } catch (error) {
       console.error('OpenRouter API Error:', error);
       
@@ -888,8 +832,8 @@ ADDITIONAL INFORMATION:
     setIsTyping(true);
 
     try {
-      // Get AI response from OpenRouter
-      const response = await callOpenRouterAPI(userMessage);
+      // Get AI response from Django backend
+      const response = await callDjangoChatAPI(userMessage);
       setChatHistory(prev => [...prev, { type: 'bot', content: response, timestamp: new Date() }]);
       setIsTyping(false);
       setIsProcessing(false);
