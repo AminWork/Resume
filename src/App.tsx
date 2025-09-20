@@ -75,7 +75,7 @@ function App() {
         location: "Tehran, Iran",
         period: "May 2024 – Present",
         description: "Leading development and deployment of advanced ML solutions across business domains, collaborating with teams to optimize performance with state-of-the-art ML algorithms, and mentoring junior engineers.",
-        logo: "/assets/company-logos/Arian Saeed Industrial Group.jpeg"
+        logo: "/assets/company-logos/Arian%20Saeed%20Industrial%20Group.jpeg"
       },
       {
         title: "Full Stack Software Engineer",
@@ -97,7 +97,7 @@ function App() {
         location: "Tehran, Iran",
         period: "Jun 2021 – Jul 2022",
         description: "Developed dynamic pricing models for train tickets using ML algorithms, implemented data streaming pipelines with Kafka and PySpark.",
-        logo: "/assets/company-logos/Part AI Research Center.webp"
+        logo: "/assets/company-logos/Part%20AI%20Research%20Center.webp"
       }
     ],
     education: [
@@ -2163,12 +2163,15 @@ ADDITIONAL INFORMATION:
                             <div className="absolute inset-0 flex items-center justify-center">
                               <div className="text-center text-white transform group-hover:scale-110 transition-transform duration-500">
                                 {item.logo ? (
-                                  <div className="mb-3 filter drop-shadow-lg animate-bounce" style={{ animationDuration: '3s' }}>
+                                  <div className="mb-3 animate-bounce" style={{ animationDuration: '3s' }}>
                                     <img 
                                       src={item.logo} 
                                       alt={`${item.company} logo`}
-                                      className="w-32 h-32 object-contain mx-auto rounded-lg bg-white/10 p-3 backdrop-blur-sm border border-cyan-400/20"
+                                      className="w-32 h-32 object-contain mx-auto rounded-lg bg-white/80 p-2 border-2 border-cyan-400"
+                                      style={{ display: 'block', visibility: 'visible', opacity: 1, zIndex: 10 }}
+                                      onLoad={() => console.log(`Successfully loaded logo: ${item.logo}`)}
                                       onError={(e) => {
+                                        console.log(`Failed to load logo: ${item.logo}`);
                                         e.currentTarget.style.display = 'none';
                                         e.currentTarget.nextSibling.style.display = 'block';
                                       }}

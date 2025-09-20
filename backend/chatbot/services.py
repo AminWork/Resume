@@ -21,7 +21,8 @@ class ChatbotService:
                     'company': 'Arian Saeed Industrial Group',
                     'location': 'Tehran, Iran',
                     'period': 'May 2024 – Present',
-                    'description': 'Leading development and deployment of advanced ML solutions across business domains, collaborating with teams to optimize performance with state-of-the-art ML algorithms, and mentoring junior engineers.'
+                    'description': 'Leading development and deployment of advanced ML solutions across business domains, collaborating with teams to optimize performance with state-of-the-art ML algorithms, and mentoring junior engineers.',
+                    'logo': '/assets/company-logos/Arian Saeed Industrial Group.jpeg'
                 },
                 {
                     'title': 'Full Stack Software Engineer',
@@ -42,7 +43,8 @@ class ChatbotService:
                     'company': 'Part AI Research Center',
                     'location': 'Tehran, Iran',
                     'period': 'Jun 2021 – Jul 2022',
-                    'description': 'Developed dynamic pricing models for train tickets using ML algorithms, implemented data streaming pipelines with Kafka and PySpark.'
+                    'description': 'Developed dynamic pricing models for train tickets using ML algorithms, implemented data streaming pipelines with Kafka and PySpark.',
+                    'logo': '/assets/company-logos/Part AI Research Center.webp'
                 }
             ],
             'education': [
