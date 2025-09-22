@@ -611,7 +611,7 @@ ADDITIONAL INFORMATION:
   const callDjangoChatAPI = async (message: string): Promise<string> => {
     console.log('Calling Django API with message:', message);
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/chat/", {
+      const response = await fetch("/api/chat/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -864,7 +864,7 @@ ADDITIONAL INFORMATION:
     setCurrentAnalysis(null);
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/analyze-experience/", {
+      const response = await fetch("/api/analyze-experience/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
