@@ -7,4 +7,20 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['lucide-react'],
   },
+  build: {
+    // Increase memory limit and optimize build
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          three: ['three', '3d-force-graph'],
+          ui: ['lucide-react', 'swiper']
+        }
+      }
+    },
+    // Reduce memory usage
+    chunkSizeWarningLimit: 1000,
+    // Enable source maps for debugging (optional)
+    sourcemap: false,
+  },
 });

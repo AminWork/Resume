@@ -387,13 +387,15 @@ function App() {
       .graphData(gData);
 
     try {
-      const bloomPass = new (THREE as any).UnrealBloomPass();
-      bloomPass.strength = 3;
-      bloomPass.radius = 1;
-      bloomPass.threshold = 0.5;
-      if (Graph.postProcessingComposer) {
-        Graph.postProcessingComposer().addPass(bloomPass);
-      }
+      // Note: UnrealBloomPass requires three/examples/jsm/postprocessing/UnrealBloomPass
+      // Commenting out for now to avoid build errors
+      // const bloomPass = new (THREE as any).UnrealBloomPass();
+      // bloomPass.strength = 3;
+      // bloomPass.radius = 1;
+      // bloomPass.threshold = 0.5;
+      // if (Graph.postProcessingComposer) {
+      //   Graph.postProcessingComposer().addPass(bloomPass);
+      // }
     } catch (error) {
       console.log('Bloom effect not available, continuing without it');
     }
