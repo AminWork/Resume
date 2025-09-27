@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronDown, Mail, Phone, Globe, Linkedin, MapPin, Calendar, Code, Database, Cloud, Brain, Award, ExternalLink, Menu, X, Star, Zap, Rocket, Target, Terminal, Minimize2, Maximize2, RotateCcw, MessageCircle, Send, Bot, User, Clock, ChevronRight } from 'lucide-react';
+import { ChevronDown, Mail, Phone, Globe, Linkedin, MapPin, Calendar, Code, Database, Cloud, Brain, Award, ExternalLink, Menu, X, Star, Zap, Rocket, Target, Terminal, Minimize2, Maximize2, RotateCcw, MessageCircle, Send, Bot, User, Clock, ChevronRight, FileText } from 'lucide-react';
 import ForceGraph3D from '3d-force-graph';
 import * as THREE from 'three';
 import { gsap } from 'gsap';
@@ -153,6 +153,7 @@ function App() {
       '  education     - Display education background',
       '  projects      - List featured projects',
       '  contact       - Show contact information',
+      '  resume        - Download resume PDF',
       '  whoami        - Display current user',
       '  pwd           - Print working directory',
       '  ls            - List directory contents',
@@ -260,15 +261,29 @@ function App() {
       '📍 Location: Tehran, Iran',
       ''
     ],
+    resume: () => {
+      // Open resume in new tab
+      window.open('/Amin Najafgholizadeh\'s Resume.pdf', '_blank');
+      return [
+        '📄 Opening resume PDF in new tab...',
+        '   File: Amin Najafgholizadeh\'s Resume.pdf',
+        '   Size: ~58KB',
+        '   Format: PDF',
+        '',
+        '💡 You can also download it directly from the hero section!',
+        ''
+      ];
+    },
     whoami: () => ['amin'],
     pwd: () => ['/home/amin/portfolio'],
     ls: () => [
-      'total 8',
+      'total 9',
       'drwxr-xr-x  2 amin amin 4096 Dec 2024 about.txt',
       'drwxr-xr-x  2 amin amin 4096 Dec 2024 skills.json',
       'drwxr-xr-x  2 amin amin 4096 Dec 2024 experience.md',
       'drwxr-xr-x  2 amin amin 4096 Dec 2024 projects/',
       'drwxr-xr-x  2 amin amin 4096 Dec 2024 contact.vcf',
+      '-rw-r--r--  1 amin amin 58755 Dec 2024 resume.pdf',
       ''
     ],
     date: () => [new Date().toString()],
@@ -717,6 +732,11 @@ ADDITIONAL INFORMATION:
       return `You can reach Amin at:\n📧 Email: ${knowledgeBase.personal.email}\n📱 Phone: ${knowledgeBase.personal.phone}\n🌐 Website: ${knowledgeBase.personal.website}\n💼 LinkedIn: ${knowledgeBase.personal.linkedin}`;
     }
     
+    // Resume questions
+    if (lowerInput.includes('resume') || lowerInput.includes('cv') || lowerInput.includes('download')) {
+      return "You can download Amin's resume! There's a 'Download Resume' button in the hero section of this portfolio, or you can use the 'resume' command in the terminal (Ctrl + ` to open). The resume contains comprehensive details about his experience, education, skills, and projects.";
+    }
+    
     // Location questions
     if (lowerInput.includes('location') || lowerInput.includes('where') || lowerInput.includes('live')) {
       return `Amin is based in ${knowledgeBase.personal.location}. He has also worked remotely for companies in the USA, including Motometrix Inc in Boston, MA.`;
@@ -737,7 +757,7 @@ ADDITIONAL INFORMATION:
     }
     
     // Default response
-    return "I'd be happy to help you learn more about Amin! You can ask me about his work experience, technical skills, education, projects, or how to contact him. What specific information are you looking for?";
+    return "I'd be happy to help you learn more about Amin! You can ask me about his work experience, technical skills, education, projects, resume download, or how to contact him. What specific information are you looking for?";
   };
 
   const scrollToSection = (sectionId: string) => {
@@ -774,7 +794,21 @@ ADDITIONAL INFORMATION:
         'about.txt': commands.about(),
         'skills.json': commands.skills(),
         'experience.md': commands.experience(),
-        'contact.vcf': commands.contact()
+        'contact.vcf': commands.contact(),
+        'resume.pdf': [
+          '📄 Resume PDF File',
+          '',
+          'Binary file (PDF format) - cannot display in terminal',
+          'Use "resume" command to open in browser',
+          'Or download directly from the hero section',
+          '',
+          'File Info:',
+          '├── Name: Amin Najafgholizadeh\'s Resume.pdf',
+          '├── Size: ~58KB',
+          '├── Format: PDF',
+          '└── Location: /public/resume.pdf',
+          ''
+        ]
       };
       
       if (filename && fileContents[filename as keyof typeof fileContents]) {
@@ -1550,139 +1584,105 @@ ADDITIONAL INFORMATION:
       </nav>
 
       {/* Chatbot Button */}
-      <button
-        onClick={() => {
-          setChatbotOpen(true);
-          setChatButtonPulse(false);
-        }}
-        className={`fixed bottom-6 left-6 z-50 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white p-4 rounded-full shadow-2xl transition-all duration-300 transform hover:scale-110 group ${
-          chatButtonPulse ? 'animate-attention-pulse' : ''
-        }`}
-        title="Chat with AI Assistant"
-      >
-        <div className="relative">
-          <MessageCircle className="transition-transform duration-300 group-hover:rotate-12" size={24} />
-          {chatButtonPulse && (
-            <>
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-ping"></div>
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></div>
-            </>
-          )}
-        </div>
-      </button>
 
-      {/* Terminal Button */}
-      <button
-        onClick={() => setTerminalOpen(true)}
-        className="fixed bottom-6 right-6 z-50 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white p-4 rounded-full shadow-2xl hover:shadow-green-500/25 transition-all duration-300 transform hover:scale-110 group"
-        title="Open Terminal (Ctrl + `)"
-      >
-        <Terminal className="transition-transform duration-300 group-hover:rotate-12" size={24} />
-      </button>
+
+
 
       {/* Chatbot */}
       {chatbotOpen && (
-        <div className={`fixed bottom-20 left-6 z-50 w-96 bg-gray-900/95 backdrop-blur-xl border border-purple-500/30 rounded-lg shadow-2xl transition-all duration-500 ${
-          chatbotMinimized ? 'h-12' : 'h-96'
-        }`}>
-          {/* Chatbot Header */}
-          <div className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-800/80 to-pink-800/80 rounded-t-lg border-b border-purple-500/30">
-            <div className="flex items-center space-x-2">
-              <Bot className="text-purple-300" size={20} />
-              <span className="text-white text-sm font-medium">AI Assistant</span>
-              <div className="flex space-x-1">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span className="text-xs text-gray-300">Online</span>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-gray-900/95 backdrop-blur-sm border border-gray-700 rounded-2xl shadow-2xl w-full max-w-2xl h-[600px] flex flex-col">
+            {/* Chatbot Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-700">
+              <div className="flex items-center space-x-3">
+                <Bot className="text-blue-400" size={24} />
+                <div>
+                  <h3 className="text-white font-semibold text-lg">AI Assistant</h3>
+                  <p className="text-gray-400 text-sm">Ask me anything about Amin's experience and skills</p>
+                </div>
+                {isTyping && <div className="typing-indicator"></div>}
               </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => setChatbotMinimized(!chatbotMinimized)}
-                className="text-gray-400 hover:text-white transition-colors duration-200"
-              >
-                {chatbotMinimized ? <Maximize2 size={16} /> : <Minimize2 size={16} />}
-              </button>
               <button
                 onClick={() => setChatbotOpen(false)}
-                className="text-gray-400 hover:text-red-400 transition-colors duration-200"
+                className="text-gray-400 hover:text-white transition-colors p-2 hover:bg-gray-800 rounded-lg"
               >
-                <X size={16} />
+                <X size={20} />
               </button>
             </div>
-          </div>
 
-          {/* Chatbot Content */}
-          {!chatbotMinimized && (
-            <div className="flex flex-col h-80">
-              <div
-                ref={chatContentRef}
-                className="flex-1 p-4 overflow-y-auto space-y-3"
-              >
-                {chatHistory.map((message, index) => (
+            {/* Chatbot Content */}
+            <div 
+              ref={chatContentRef}
+              className="flex-1 overflow-y-auto p-6 space-y-4"
+            >
+              {chatHistory.map((message, index) => (
+                <div
+                  key={index}
+                  className={`flex items-start space-x-3 ${
+                    message.type === 'user' ? 'justify-end' : 'justify-start'
+                  }`}
+                >
+                  {message.type === 'bot' && (
+                    <Bot className="text-blue-400 flex-shrink-0 mt-1" size={20} />
+                  )}
                   <div
-                    key={index}
-                    className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div className={`max-w-xs p-3 rounded-lg ${
+                    className={`max-w-md p-4 rounded-2xl ${
                       message.type === 'user'
-                        ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
-                        : 'bg-gray-700/80 text-gray-200 border border-purple-500/20'
-                    }`}>
-                      <div className="flex items-start space-x-2">
-                        {message.type === 'bot' && <Bot size={16} className="text-purple-400 mt-0.5 flex-shrink-0" />}
-                        {message.type === 'user' && <User size={16} className="text-blue-200 mt-0.5 flex-shrink-0" />}
-                        <div>
-                          <p className="text-sm whitespace-pre-line">{message.content}</p>
-                          <p className="text-xs opacity-70 mt-1">
-                            {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                {isTyping && (
-                  <div className="flex justify-start">
-                    <div className="bg-gray-700/80 text-gray-200 border border-purple-500/20 p-3 rounded-lg">
-                      <div className="flex items-center space-x-2">
-                        <Bot size={16} className="text-purple-400" />
-                        <div className="flex space-x-1">
-                          <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce"></div>
-                          <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                          <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div className="p-3 border-t border-purple-500/30">
-                <div className="flex items-center space-x-2">
-                  <input
-                    ref={chatInputRef}
-                    type="text"
-                    value={chatInput}
-                    onChange={(e) => setChatInput(e.target.value)}
-                    onKeyDown={handleChatKeyDown}
-                    className="flex-1 bg-gray-800/50 text-white text-sm rounded-lg px-3 py-2 border border-purple-500/30 focus:border-purple-400 focus:outline-none"
-                    placeholder={isProcessing ? "Processing..." : "Ask me about Amin..."}
-                    disabled={isTyping || isProcessing}
-                  />
-                  <button
-                    onClick={handleChatSubmit}
-                    disabled={isTyping || isProcessing || !chatInput.trim()}
-                    className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white p-2 rounded-lg transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-800 text-gray-300'
+                    }`}
                   >
-                    {isProcessing ? (
-                      <div className="w-4 h-4 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      <Send size={16} />
-                    )}
-                  </button>
+                    <p className="text-sm leading-relaxed">{message.content}</p>
+                    <span className="text-xs opacity-70 mt-2 block">
+                      {message.timestamp.toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </span>
+                  </div>
+                  {message.type === 'user' && (
+                    <User className="text-green-400 flex-shrink-0 mt-1" size={20} />
+                  )}
                 </div>
+              ))}
+              {isTyping && (
+                <div className="flex items-start space-x-3">
+                  <Bot className="text-blue-400 flex-shrink-0 mt-1" size={20} />
+                  <div className="bg-gray-800 p-4 rounded-2xl">
+                    <div className="typing-dots">
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            {/* Chatbot Input */}
+            <div className="p-6 border-t border-gray-700">
+              <div className="flex space-x-3">
+                <input
+                  ref={chatInputRef}
+                  type="text"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={handleChatKeyDown}
+                  placeholder="Ask me anything about Amin's experience, skills, projects..."
+                  className="flex-1 bg-gray-800 text-white rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-gray-600"
+                  disabled={isProcessing}
+                />
+                <button
+                  onClick={handleChatSubmit}
+                  disabled={!chatInput.trim() || isProcessing}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                >
+                  <Send size={18} />
+                  <span className="hidden sm:inline">Send</span>
+                </button>
               </div>
             </div>
-          )}
+          </div>
         </div>
       )}
 
@@ -1801,13 +1801,39 @@ ADDITIONAL INFORMATION:
           </div>
           
           <div className={`transition-all duration-1000 delay-500 ${isLoaded ? 'animate-fade-in-up' : 'opacity-0 translate-y-10'}`}>
-            <p className="text-base sm:text-xl text-gray-400 mb-12 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-base sm:text-xl text-gray-400 mb-8 max-w-3xl mx-auto leading-relaxed">
               Building the future with AI and cutting-edge technology. 4+ years of experience in machine learning, 
               full-stack development, and data science.
             </p>
           </div>
           
-          <div className={`flex flex-col sm:flex-row gap-6 justify-center transition-all duration-1000 delay-700 ${isLoaded ? 'animate-fade-in-up' : 'opacity-0 translate-y-10'}`}>
+          {/* Chatbot Info Box */}
+          <div className={`transition-all duration-1000 delay-600 ${isLoaded ? 'animate-fade-in-up' : 'opacity-0 translate-y-10'}`}>
+            <div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 backdrop-blur-sm border border-blue-400/30 rounded-2xl p-6 max-w-2xl mx-auto mb-12 hover:border-blue-400/50 transition-all duration-300">
+              <div className="flex items-center justify-center space-x-3 mb-4">
+                <Bot className="text-blue-400" size={24} />
+                <h3 className="text-xl font-semibold text-white">Get to Know Me Better</h3>
+              </div>
+              <p className="text-gray-300 text-center leading-relaxed">
+                Have questions about my experience, skills, or projects? Chat with my AI assistant! 
+                It's powered by advanced language models and has comprehensive knowledge about my background.
+              </p>
+              <div className="mt-4 flex justify-center">
+                <button 
+                  onClick={() => {
+                    setChatbotOpen(true);
+                    setChatButtonPulse(false);
+                  }}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-blue-500/25 flex items-center space-x-2"
+                >
+                  <MessageCircle size={18} />
+                  <span>Start Conversation</span>
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <div className={`flex flex-col sm:flex-row gap-4 justify-center transition-all duration-1000 delay-800 ${isLoaded ? 'animate-fade-in-up' : 'opacity-0 translate-y-10'}`}>
             <button
               onClick={() => scrollToSection('contact')}
               className="cta-button group bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/25"
@@ -1817,6 +1843,17 @@ ADDITIONAL INFORMATION:
                 <span>Get In Touch</span>
               </span>
             </button>
+            <a
+              href="/Amin Najafgholizadeh's Resume.pdf"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="cta-button group bg-gradient-to-r from-teal-600 to-green-600 hover:from-teal-700 hover:to-green-700 text-white px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-2xl hover:shadow-teal-500/25"
+            >
+              <span className="flex items-center justify-center space-x-2">
+                <FileText className="transition-transform duration-300 group-hover:scale-110" size={20} />
+                <span>Download Resume</span>
+              </span>
+            </a>
             <button
               onClick={() => scrollToSection('experience')}
               className="cta-button-outline group border-2 border-blue-600 text-blue-400 hover:bg-blue-600 hover:text-white px-6 py-3 sm:px-8 sm:py-4 rounded-xl font-semibold transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/25"
